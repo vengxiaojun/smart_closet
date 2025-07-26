@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试Closet.json读取功能</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        .success {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>测试Closet.json读取功能</h1>
+    
+    <div class="test-section">
+        <h2>测试步骤</h2>
+        <ol>
+            <li>点击下面的按钮测试closet.json读取功能</li>
+            <li>查看控制台输出和页面显示的结果</li>
+            <li>确认JSON数据是否正确读取和转换</li>
+        </ol>
+        
+        <button onclick="testClosetJsonReading()">测试Closet.json读取</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试结果</h2>
+        <div id="test-result" class="result">点击按钮开始测试...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>JSON内容预览</h2>
+        <div id="json-preview" class="result">等待测试结果...</div>
+    </div>
+
+    <script>
+        async function testClosetJsonReading() {
+            const resultDiv = document.getElementById('test-result');
+            const previewDiv = document.getElementById('json-preview');
+            
+            resultDiv.textContent = '正在测试...';
+            resultDiv.className = 'result';
+            previewDiv.textContent = '等待测试结果...';
+            
+            try {
+                const response = await fetch("{% url 'test_closet_json_reading' %}", {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `测试成功！
+字符串长度: ${data.string_length} 字符
+数据项数量: ${Object.keys(data.data).length} 个文件`;
+                    
+                    previewDiv.textContent = data.string_preview;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `测试失败: ${data.error}`;
+                    previewDiv.textContent = '无数据';
+                }
+                
+                console.log('测试结果:', data);
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `请求失败: ${error.message}`;
+                previewDiv.textContent = '请求失败';
+                console.error('测试请求失败:', error);
+            }
+        }
+    </script>
+</body>
+</html> 

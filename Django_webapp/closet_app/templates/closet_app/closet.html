@@ -1,0 +1,1735 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#673ab7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>我的衣柜 - 分类查看</title>
+  {% csrf_token %}
+  <link rel="stylesheet" href="{% static 'closet_app/responsive.css' %}">
+  <script src="{% static 'closet_app/device-adapter.js' %}"></script>
+  <style>
+    /* 重置默认样式 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    /* 为页面主体添加底部边距，防止被固定导航栏遮挡 */
+    body {
+      padding-bottom: 80px;
+      background-color: #E4DCF5;
+    }
+
+    /* 页面容器最大宽度限制 */
+    .page-container {
+      max-width: 440px; /* 比一般手机屏幕(375px)宽约17% */
+      margin: 0 auto;
+      background-color: #E4DCF5;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden; /* 禁用纵向滑动 */
+      touch-action: none; /* 禁用触摸滑动 */
+      -webkit-overflow-scrolling: none; /* 禁用iOS滚动 */
+    }
+
+    /* 手机端禁用页面整体滑动，但允许容器内滑动 */
+    @media (max-width: 440px) {
+      body {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        -webkit-overflow-scrolling: none;
+      }
+      
+      html {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* 允许closet容器内的滑动 */
+      .closet-container {
+        overflow: visible;
+      }
+
+      .clothes-container {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+      }
+
+      .category-list {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+      }
+    }
+
+    /* 在电脑端显示边框效果 */
+    @media (min-width: 441px) {
+      .page-container {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+        margin-top: 20px; /* 在电脑端添加顶部边距 */
+        margin-bottom: 20px; /* 在电脑端添加底部边距 */
+        border-radius: 12px; /* 圆角效果 */
+      }
+    }
+
+    /* 重置 i 标签的斜体样式，确保图标正常显示 */
+    i {
+      font-style: normal;
+    }
+
+    /* 搜索栏与上传按钮区域 */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0px 16px;
+      background-color: #D0B0EB;
+      height: 72px;
+      max-height: 72px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      background-color: #f8f8f8;
+      border-radius: 20px;
+      padding: 4px 16px;
+      flex: 1;
+      margin: 0 12px;
+      min-height: 32px;
+    }
+
+    .search-box input {
+      border: none;
+      outline: none;
+      background-color: transparent;
+      font-size: 14px;
+      color: #333;
+      flex: 1;
+    }
+
+    .search-icon {
+      width: 20px;
+      height: 20px;
+      background: url('https://cdn-icons-png.flaticon.com/512/482/482501.png') center/cover no-repeat;
+    }
+
+    /* 衣柜内容区域 */
+    .closet-container {
+      display: flex;
+      padding: 16px;
+      height: calc(100vh - 72px - 60px);
+      overflow: hidden;
+    }
+
+    /* 右侧衣服展示区域可滑动 */
+    .clothes-container {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    /* 自定义滚动条样式 */
+    .clothes-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .clothes-container::-webkit-scrollbar-track {
+      background: rgba(103, 58, 183, 0.1);
+      border-radius: 3px;
+    }
+
+    .clothes-container::-webkit-scrollbar-thumb {
+      background: rgba(103, 58, 183, 0.3);
+      border-radius: 3px;
+    }
+
+    .clothes-container::-webkit-scrollbar-thumb:hover {
+      background: rgba(103, 58, 183, 0.5);
+    }
+
+    /* 左侧分类列表（可点击切换） */
+    .category-list {
+      width: 80px;
+      background-color: #e5f3ff;
+      border-radius: 8px;
+      padding: 8px;
+      margin-right: 16px;
+      overflow-y: auto;
+      max-height: 100%;
+      flex-shrink: 0;
+    }
+
+    /* 左侧分类列表滚动条样式 */
+    .category-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .category-list::-webkit-scrollbar-track {
+      background: rgba(103, 58, 183, 0.1);
+      border-radius: 2px;
+    }
+
+    .category-list::-webkit-scrollbar-thumb {
+      background: rgba(103, 58, 183, 0.3);
+      border-radius: 2px;
+    }
+
+    .category-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(103, 58, 183, 0.5);
+    }
+
+    .category-item {
+      width: 100%;
+      background-color: #fff;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 4px;
+      position: relative;
+      min-height: 40px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateZ(0);
+    }
+
+    .category-item:hover {
+      transform: translateZ(0) scale(1.05);
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.2);
+    }
+
+    .category-item:active {
+      transform: translateZ(0) scale(0.98);
+      transition: all 0.1s ease;
+    }
+
+    /* 选中的分类高亮 */
+    .category-item.active {
+      background-color: #673ab7; /* 紫色高亮 */
+    }
+
+    .category-item.active span {
+      color: white; /* 选中时文字变白 */
+    }
+
+    .category-item span {
+      font-size: 10px;
+      color: #333;
+      text-align: center;
+      margin-top: 4px;
+      transition: color 0.2s;
+    }
+
+    /* 右侧图片区域（默认隐藏所有分类，只显示选中的） */
+    .clothes-container {
+      flex: 1;
+      overflow-y: auto;
+      max-height: 100%;
+      padding: 10px 8px;
+      background-color: rgba(128, 0, 128, 0.05);
+      border-radius: 8px;
+    }
+
+    /* 分类图片区域（默认隐藏，点击分类后显示） */
+    .category-section {
+      display: none; /* 默认隐藏所有分类 */
+    }
+
+    /* 选中的分类区域显示 */
+    .category-section.active {
+      display: block;
+    }
+
+    /* 图片网格（一行两张） */
+    .clothes-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-gap: 16px;
+    }
+
+    .clothes-item {
+      border-radius: 8px;
+      width: 100%;
+      height: 160px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      background-color: #fff;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .clothes-item:hover {
+      transform: scale(1.05) translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .clothes-item:active {
+      transform: scale(1.02) translateY(0);
+      transition: all 0.1s ease;
+    }
+    
+    .clothes-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* 分类标题 */
+    .category-title {
+      font-size: 16px;
+      color: #6a0dad;
+      margin: 0 0 12px 4px;
+      font-weight: 600;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(128, 0, 128, 0.1);
+    }
+
+    /* 无图片提示 */
+    .empty-message {
+      grid-column: 1 / -1;
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 30px 20px;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      border: 1px dashed #ddd;
+    }
+
+    /* 底部导航与悬浮按钮 */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 440px; /* 与页面容器保持一致 */
+      height: 60px;
+      background: #fff;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    /* 在电脑端为底部导航栏添加边框效果 */
+    @media (min-width: 441px) {
+      .bottom-nav {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        border-bottom: 1px solid rgba(103, 58, 183, 0.1);
+        border-radius: 0 0 12px 12px; /* 底部圆角 */
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+      }
+    }
+
+    .nav-item {
+      text-align: center;
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      padding: 8px 0;
+      min-height: 60px;
+    }
+    .nav-item:hover {
+      background-color: #f5f5f5;
+    }
+    .nav-item:active {
+      background-color: #e0e0e0;
+    }
+    .nav-item i {
+      font-size: 22px;
+      color: #999;
+      display: block;
+      margin-bottom: 2px;
+      pointer-events: none;
+    }
+    .nav-item span {
+      font-size: 12px;
+      color: #999;
+      pointer-events: none;
+    }
+    .nav-item.active span {
+      color: #673ab7;
+    }
+
+    .floating-btn {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 56px;
+      height: 56px;
+      background: #673ab7;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.4);
+      z-index: 1000;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .floating-btn:hover {
+      transform: translateX(-50%) scale(1.05);
+    }
+
+    /* 上传按钮样式 */
+    .upload-btn {
+      background-color: #673ab7;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 4px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background-color 0.2s;
+      min-height: 32px;
+      white-space: nowrap;
+    }
+
+    .upload-btn:hover {
+      background-color: #5a2ca0;
+    }
+
+    /* 隐藏原生文件选择框 */
+    #file-upload {
+      display: none;
+    }
+
+    /* 弹窗样式 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal.show {
+      opacity: 1;
+    }
+
+    .modal-content {
+      background-color: white;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 300px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      transform: scale(0.8) translateY(-20px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .modal.show .modal-content {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    .modal-content {
+      background-color: white;
+      margin: 15% auto;
+      padding: 20px;
+      border-radius: 12px;
+      width: 300px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .modal-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s ease;
+    }
+
+    .modal-btn.confirm {
+      background: #ff4757;
+      color: white;
+    }
+
+    .modal-btn.confirm:hover {
+      background: #ff3742;
+    }
+
+    .modal-btn.cancel {
+      background: #f1f2f6;
+      color: #333;
+    }
+
+    .modal-btn.cancel:hover {
+      background: #e9ecef;
+    }
+    
+    /* 加载动画 */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 通知提示样式 */
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 2000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+      max-width: 300px;
+      text-align: center;
+    }
+
+    .notification.success {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    .notification.error {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .notification.loading {
+      background-color: #2196f3;
+      color: white;
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .notification.hide {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+
+    /* 加载动画 */
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+
+    /* 图片切换动画样式 */
+    .outfit-image {
+      transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-origin: center;
+    }
+
+    .outfit-image.fade-out {
+      opacity: 0;
+      transform: scale(0.8) rotate(-5deg);
+    }
+
+    .outfit-image.fade-in {
+      opacity: 1;
+      transform: scale(1) rotate(0deg);
+    }
+
+    .outfit-image.loading {
+      opacity: 0.6;
+      transform: scale(0.95);
+      filter: blur(1px);
+    }
+
+    .outfit-image.switching {
+      animation: switching-animation 0.6s ease-in-out;
+    }
+
+    @keyframes switching-animation {
+      0% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+      }
+      25% {
+        opacity: 0.3;
+        transform: scale(0.9) rotate(-3deg);
+      }
+      50% {
+        opacity: 0.1;
+        transform: scale(0.8) rotate(-5deg);
+      }
+      75% {
+        opacity: 0.3;
+        transform: scale(0.9) rotate(3deg);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+      }
+    }
+
+    .outfit-image.fit-mode {
+      border: 3px solid #673ab7;
+      box-shadow: 0 4px 20px rgba(103, 58, 183, 0.3);
+    }
+
+    .outfit-image.coord-mode {
+      border: 2px dashed rgba(103, 58, 183, 0.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 加载指示器 */
+    .loading-indicator {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(103, 58, 183, 0.2);
+      border-top: 3px solid #673ab7;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      z-index: 10;
+    }
+
+    /* 图片容器相对定位 */
+    .outfit-image-container {
+      position: relative;
+      display: inline-block;
+    }
+
+    /* 切换按钮样式 */
+    .switch-mode-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(103, 58, 183, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 9998;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .switch-mode-btn:hover {
+      background: rgba(103, 58, 183, 1);
+      transform: scale(1.1);
+    }
+
+    /* 状态指示器 */
+    .mode-indicator {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      z-index: 9997;
+    }
+  </style>
+</head>
+
+<body>
+    <div class="page-container">
+      <!-- 搜索栏与上传按钮 -->
+      <div class="header">
+      <div class="search-box">
+        <input type="text" placeholder="搜索衣物">
+        <div class="search-icon"></div>
+      </div>
+      <!-- 上传按钮 -->
+      <label for="file-upload" class="upload-btn">
+        <i>📁</i> 上传
+      </label>
+      <input type="file" id="file-upload" accept="image/*" multiple>
+    </div>
+
+    <!-- 衣柜内容区域 -->
+    <div class="closet-container">
+      <!-- 左侧分类列表（可点击） -->
+      <div class="category-list">
+        <div class="category-item" data-category="T恤">
+          <img src="{% static 'closet_app/icon/T-shirt.png' %}" alt="T恤" width="24" height="24">
+          <span>T恤</span>
+        </div>
+        <div class="category-item" data-category="外套">
+          <img src="{% static 'closet_app/icon/coat.png' %}" alt="外套" width="24" height="24">
+          <span>外套</span>
+        </div>
+        <div class="category-item" data-category="连衣裙">
+          <img src="{% static 'closet_app/icon/dress.png' %}" alt="连衣裙" width="24" height="24">
+          <span>连衣裙</span>
+        </div>
+        <div class="category-item" data-category="开衫">
+          <img src="{% static 'closet_app/icon/cardigan.png' %}" alt="开衫" width="24" height="24">
+          <span>开衫</span>
+        </div>
+        <div class="category-item" data-category="长裤">
+          <img src="{% static 'closet_app/icon/trousers.png' %}" alt="长裤" width="24" height="24">
+          <span>长裤</span>
+        </div>
+        <div class="category-item" data-category="衬衫">
+          <img src="{% static 'closet_app/icon/shirt.png' %}" alt="衬衫" width="24" height="24">
+          <span>衬衫</span>
+        </div>
+        <div class="category-item" data-category="短裙">
+          <img src="{% static 'closet_app/icon/short-skirt.png' %}" alt="短裙" width="24" height="24">
+          <span>短裙</span>
+        </div>
+        <div class="category-item" data-category="正装">
+          <img src="{% static 'closet_app/icon/suit.png' %}" alt="正装" width="24" height="24">
+          <span>正装</span>
+        </div>
+        <div class="category-item" data-category="短裤">
+          <img src="{% static 'closet_app/icon/shorts.png' %}" alt="短裤" width="24" height="24">
+          <span>短裤</span>
+        </div>
+        <div class="category-item" data-category="卫衣">
+          <img src="{% static 'closet_app/icon/sweatshirt.png' %}" alt="卫衣" width="24" height="24">
+          <span>卫衣</span>
+        </div>
+      </div>
+
+      <!-- 右侧图片区域（按分类显示） -->
+      <div class="clothes-container">
+        {% for category, images in closet_images.items %}
+          <!-- 每个分类对应一个区域，ID与分类名关联 -->
+          <div class="category-section" id="section-{{ category }}">
+            <h3 class="category-title">{{ category }}</h3>
+            <div class="clothes-grid">
+              {% for image_info in images %}
+                <div class="clothes-item" data-filename="{{ image_info.filename }}" data-url="{{ image_info.url }}" oncontextmenu="event.preventDefault(); showDeleteConfirm('{{ image_info.filename }}', '{{ image_info.url }}')">
+                  <img class="clothes-img" src="{{ image_info.url }}" alt="{{ category }}" title="{{ image_info.remark }}">
+                </div>
+              {% empty %}
+                <div class="empty-message">暂无{{ category }}图片</div>
+              {% endfor %}
+            </div>
+          </div>
+        {% empty %}
+          <div style="text-align: center; padding: 60px 20px; color: #666;">
+            衣柜还是空的，快去添加衣物吧～
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- 底部导航与悬浮按钮 -->
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <a href="{% url 'index' %}" style="text-decoration: none;">
+          <i>🏠</i>
+          <span>home</span>
+        </a>
+      </div>
+      <div class="nav-item active">
+        <i>👕</i>
+        <span>closet</span>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'match' %}" style="text-decoration: none;">
+          <i>⭐️</i>
+          <span>favourite</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'profile' %}" style="text-decoration: none;">
+          <i>👤</i>
+          <span>profile</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="floating-btn">
+      <a href="{% url 'mirror' %}" style="text-decoration: none; color: white;">
+        <i>🪞</i>
+      </a>
+    </div>
+  <!-- 删除确认弹窗 -->
+  <div id="deleteModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-title">确认删除</div>
+      <p>是否确认删除这件衣物？</p>
+      <div class="modal-buttons">
+        <button class="modal-btn confirm" onclick="confirmDelete()">确认删除</button>
+        <button class="modal-btn cancel" onclick="closeDeleteModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 推荐搭配弹窗 -->
+  <div id="recomModal" class="modal"></div>
+
+  <!-- 分类切换的JavaScript -->
+  <script>
+    // 全局错误处理器
+    window.addEventListener('error', function(e) {
+      console.error('JavaScript错误:', e.error);
+      console.error('错误信息:', e.message);
+      console.error('错误文件:', e.filename);
+      console.error('错误行号:', e.lineno);
+      console.error('错误列号:', e.colno);
+    });
+    
+    // 页面加载完成后执行
+    document.addEventListener('DOMContentLoaded', function() {
+      // 获取所有分类项和分类区域
+      const categoryItems = document.querySelectorAll('.category-item');
+      const categorySections = document.querySelectorAll('.category-section');
+
+      // 检查URL参数中是否有分类信息
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetCategory = urlParams.get('category');
+      
+      if (targetCategory) {
+        // 如果有目标分类，自动切换到该分类
+        console.log(`自动跳转到分类: ${targetCategory}`);
+        
+        // 查找对应的分类项
+        const targetCategoryItem = Array.from(categoryItems).find(item => 
+          item.getAttribute('data-category') === targetCategory
+        );
+        
+        if (targetCategoryItem) {
+          // 移除所有分类项的选中状态
+          categoryItems.forEach(i => i.classList.remove('active'));
+          // 给目标分类项添加选中状态
+          targetCategoryItem.classList.add('active');
+          
+          // 隐藏所有分类区域
+          categorySections.forEach(section => {
+            section.classList.remove('active');
+          });
+          
+          // 显示对应的分类区域
+          const targetSection = document.getElementById(`section-${targetCategory}`);
+          if (targetSection) {
+            targetSection.classList.add('active');
+            
+            // 自动跳转完成，用户可以滑动查看衣物
+            console.log(`已自动跳转到${targetCategory}分类`);
+          }
+          
+          // 显示成功消息
+          showNotification(`已自动跳转到${targetCategory}分类`, 'success');
+        } else {
+          console.warn(`未找到分类: ${targetCategory}`);
+          // 如果没找到目标分类，使用默认逻辑
+          if (categoryItems.length > 0 && categorySections.length > 0) {
+            categoryItems[0].classList.add('active');
+            categorySections[0].classList.add('active');
+          }
+        }
+      } else {
+        // 默认显示第一个分类（如果有分类的话）
+        if (categoryItems.length > 0 && categorySections.length > 0) {
+          categoryItems[0].classList.add('active');
+          categorySections[0].classList.add('active');
+        }
+      }
+
+      // 给每个分类项添加点击事件
+      categoryItems.forEach(item => {
+        item.addEventListener('click', function() {
+          // 获取当前点击的分类名称
+          const category = this.getAttribute('data-category');
+          
+          // 移除所有分类项的选中状态
+          categoryItems.forEach(i => i.classList.remove('active'));
+          // 给当前点击的分类项添加选中状态
+          this.classList.add('active');
+          
+          // 隐藏所有分类区域
+          categorySections.forEach(section => {
+            if (section.classList.contains('active')) {
+              // 添加淡出动画
+              section.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+              section.style.opacity = '0';
+              section.style.transform = 'translateY(-10px)';
+              
+              setTimeout(() => {
+                section.classList.remove('active');
+                section.style.transition = '';
+                section.style.opacity = '';
+                section.style.transform = '';
+              }, 300);
+            }
+          });
+          
+          // 显示对应的分类区域
+          const targetSection = document.getElementById(`section-${category}`);
+          if (targetSection) {
+            // 添加淡入动画
+            targetSection.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            targetSection.style.opacity = '0';
+            targetSection.style.transform = 'translateY(10px)';
+            
+            targetSection.classList.add('active');
+            
+            setTimeout(() => {
+              targetSection.style.opacity = '1';
+              targetSection.style.transform = 'translateY(0)';
+              
+              setTimeout(() => {
+                targetSection.style.transition = '';
+                targetSection.style.opacity = '';
+                targetSection.style.transform = '';
+              }, 300);
+            }, 50);
+            
+            // 类别切换完成，用户可以滑动查看衣物
+            console.log(`已切换到${category}分类`);
+          }
+        });
+      });
+    
+      // 新增：文件上传逻辑
+      const fileInput = document.getElementById('file-upload');
+      fileInput.addEventListener('change', function(e) {
+        const files = e.target.files;
+        if (files.length === 0) return;
+
+        // 1. 显示上传提示
+        showNotification(`已选择 ${files.length} 张图片，即将上传...`, 'success');
+
+        // 2. 逐个上传文件
+        for (let i = 0; i < files.length; i++) {
+          const formData = new FormData();
+          formData.append('image', files[i]);
+
+          // 3. 发送上传请求到新的云端上传接口
+          fetch("{% url 'upload_clothes' %}", {
+            method: 'POST',
+            body: formData,
+          })
+          .then(response => {
+            if (!response.ok) throw new Error('上传失败');
+            return response.json();
+          })
+          .then(data => {
+            if (data.success) {
+              showNotification(`第${i+1}张图片上传成功！分类结果：${data.label}`, 'success');
+              
+              // 检查是否有分类信息，如果有则跳转到对应分类
+              if (data.closet_category) {
+                showNotification(`已将新上传的衣物分类为${data.closet_category}`, 'success');
+                
+                // 延迟跳转，让用户看到成功消息
+                setTimeout(() => {
+                  // 跳转到closet页面并传递分类参数
+                  window.location.href = `{% url 'closet' %}?category=${encodeURIComponent(data.closet_category)}`;
+                }, 1500);
+              } else {
+                // 如果没有分类信息，刷新页面
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1000);
+              }
+            } else {
+              showNotification(`第${i+1}张图片上传失败：${data.error}`, 'error');
+            }
+          })
+          .catch(error => {
+            console.error('上传错误：', error);
+            showNotification(`第${i+1}张图片上传失败，请重试`, 'error');
+          });
+        }
+
+        // 4. 清空文件输入（允许重复选择同一文件）
+        fileInput.value = '';
+      });
+    });
+
+    // 衣物图片点击弹窗推荐搭配（使用事件委托）
+    document.addEventListener('click', function(e) {
+      console.log('=== 全局点击事件被触发 ===');
+      console.log('点击事件被触发，目标元素:', e.target); // 添加调试日志
+      console.log('目标元素的classList:', e.target.classList);
+      console.log('目标元素的tagName:', e.target.tagName);
+      
+      // 检查是否点击了衣物图片容器
+      const clothesItem = e.target.closest('.clothes-item');
+      console.log('找到的clothes-item:', clothesItem); // 添加调试日志
+      
+      if (clothesItem) {
+        const filename = clothesItem.getAttribute('data-filename');
+        const url = clothesItem.getAttribute('data-url');
+        console.log('获取到的filename:', filename); // 添加调试日志
+        console.log('获取到的url:', url); // 添加调试日志
+        
+        if (filename) {
+          console.log('准备调用showRecomModal'); // 添加调试日志
+          showRecomModal(filename).catch(error => {
+            console.error('显示推荐弹窗失败:', error);
+          });
+        } else {
+          console.log('filename为空，不调用showRecomModal');
+        }
+      } else {
+        console.log('未找到clothes-item元素');
+      }
+    });
+
+    // 删除功能相关变量
+    let currentDeleteFilename = '';
+    let currentDeleteUrl = '';
+
+    // 显示删除确认弹窗
+    function showDeleteConfirm(filename, url) {
+      currentDeleteFilename = filename;
+      currentDeleteUrl = url;
+      const modal = document.getElementById('deleteModal');
+      modal.style.display = 'block';
+      
+      // 添加显示动画
+      setTimeout(() => {
+        modal.classList.add('show');
+      }, 10);
+    }
+
+    // 关闭删除确认弹窗
+    function closeDeleteModal() {
+      const modal = document.getElementById('deleteModal');
+      modal.classList.remove('show');
+      
+      // 等待动画完成后隐藏
+      setTimeout(() => {
+        modal.style.display = 'none';
+        currentDeleteFilename = '';
+        currentDeleteUrl = '';
+      }, 300);
+    }
+
+    // 确认删除衣物
+    function confirmDelete() {
+      if (!currentDeleteFilename) {
+        showNotification('删除失败：未找到衣物信息','error');
+        closeDeleteModal();
+        return;
+      }
+
+      // 发送删除请求到后端
+      fetch("{% url 'closet_delete' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          id: currentDeleteFilename
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification('衣物删除成功！','success');
+          // 刷新页面显示更新后的衣柜
+          window.location.reload();
+        } else {
+          showNotification('删除失败：' + (data.error || '未知错误'),'error');
+        }
+      })
+      .catch(error => {
+        console.error('删除错误：', error);
+        showNotification('删除失败，请重试','error');
+      })
+      .finally(() => {
+        closeDeleteModal();
+      });
+    }
+
+    // 获取CSRF Token的辅助函数
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    // 点击弹窗外部关闭弹窗
+    window.onclick = function(event) {
+      const modal = document.getElementById('deleteModal');
+      if (event.target === modal) {
+        closeDeleteModal();
+      }
+    }
+
+    // 推荐搭配弹窗
+    async function showRecomModal(filename) {
+      console.log('=== showRecomModal函数被调用 ===');
+      console.log('传入的filename:', filename);
+      console.log('函数调用栈:', new Error().stack);
+      
+      // 解析主文件名（去除扩展名）
+      const base = filename.replace(/\.[^.]+$/, '');
+      const img1 = `/static/recoms/${base}/${base}-COORD1.jpg`;
+      const img2 = `/static/recoms/${base}/${base}-COORD2.jpg`;
+      
+      console.log('图片路径:', img1, img2); // 添加调试日志
+      console.log('基础文件名:', base); // 添加调试日志
+      
+      // 移除已有弹窗
+      const old = document.getElementById('recomModal');
+      if (old) old.remove();
+      
+      // 创建弹窗
+      const modal = document.createElement('div');
+      modal.id = 'recomModal';
+      modal.style = `position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:2000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);`;
+      
+      // 检查图片是否存在，如果不存在则显示占位图
+      const placeholderImg = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(`
+        <svg width="150" height="260" xmlns="http://www.w3.org/2000/svg">
+          <rect width="150" height="260" fill="#f5f5f5" stroke="#ddd" stroke-width="2" stroke-dasharray="5,5"/>
+          <text x="75" y="130" text-anchor="middle" fill="#999" font-size="12" font-family="Arial">当前的衣物数量不足</text>
+          <text x="75" y="150" text-anchor="middle" fill="#999" font-size="12" font-family="Arial">点击下方刷新重试</text>
+        </svg>
+      `)))}`;
+      
+      // 添加时间戳避免浏览器缓存
+      const timestamp = new Date().getTime();
+      const img1WithTimestamp = `${img1}?t=${timestamp}`;
+      const img2WithTimestamp = `${img2}?t=${timestamp}`;
+      
+      console.log('带时间戳的图片路径:', img1WithTimestamp, img2WithTimestamp); // 添加调试日志
+      
+      // 强制清除相关图片的缓存
+      await clearImageCache(base);
+      
+      modal.innerHTML = `
+        <div style="background:rgba(255,255,255,0.8);backdrop-filter:blur(10px);border-radius:20px;padding:24px 16px;max-width:420px;width:90vw;display:flex;flex-direction:column;gap:18px;box-shadow:0 8px 32px rgba(0,0,0,0.3);position:relative;transform:scale(0.8) translateY(-20px);opacity:0;transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1);" id="recomModalContent">
+          <button onclick="closeRecomModal()" style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.9);border:none;font-size:24px;color:#999;cursor:pointer;width:32px;height:32px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.1);transition:all 0.2s ease;z-index:9999;">×</button>
+          
+          <div style="display:flex;flex-direction:row;gap:18px;">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <div class="outfit-image-container">
+                <img src="${img1WithTimestamp}" alt="搭配1" class="outfit-image coord-mode" style="width:100%;max-width:150px;max-height:260px;border-radius:12px;object-fit:contain;background:rgba(245,245,245,0.8);margin-bottom:8px;cursor:pointer;" onerror="this.src='${placeholderImg}';this.onerror=null;" onclick="handleOutfitImageClick('${base}', '${base}-COORD1.jpg', this)" data-filename="${base}-COORD1.jpg" data-base="${base}">
+                <div class="mode-indicator">搭配</div>
+                <button class="switch-mode-btn" onclick="toggleImageMode(this.parentElement.querySelector('.outfit-image'))" title="切换模式">🔄</button>
+              </div>
+              <div style="text-align:center;font-size:13px;color:#673ab7;font-weight:bold;">推荐搭配1</div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <div class="outfit-image-container">
+                <img src="${img2WithTimestamp}" alt="搭配2" class="outfit-image coord-mode" style="width:100%;max-width:150px;max-height:260px;border-radius:12px;object-fit:contain;background:rgba(245,245,245,0.8);margin-bottom:8px;cursor:pointer;" onerror="this.src='${placeholderImg}';this.onerror=null;" onclick="handleOutfitImageClick('${base}', '${base}-COORD2.jpg', this)" data-filename="${base}-COORD2.jpg" data-base="${base}">
+                <div class="mode-indicator">搭配</div>
+                <button class="switch-mode-btn" onclick="toggleImageMode(this.parentElement.querySelector('.outfit-image'))" title="切换模式">🔄</button>
+              </div>
+              <div style="text-align:center;font-size:13px;color:#673ab7;font-weight:bold;">推荐搭配2</div>
+            </div>
+          </div>
+          
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button onclick="refreshOutfitRecommendations('${filename}')" style="background:linear-gradient(135deg,#673ab7,#9c27b0);color:white;border:none;border-radius:20px;padding:12px 24px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 4px 12px rgba(103,58,183,0.3);transition:all 0.3s ease;">
+              <span>🔄 刷新推荐搭配</span>
+            </button>
+            <button onclick="showDeleteConfirm('${filename}', ''); document.getElementById('recomModal').remove();" style="background:linear-gradient(135deg,#ff4757,#ff3742);color:white;border:none;border-radius:20px;padding:12px 24px;font-size:14px;font-weight:bold;cursor:pointer;box-shadow:0 4px 12px rgba(255,71,87,0.3);transition:all 0.3s ease;">
+              <span>🗑️ 删除衣物</span>
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      console.log('弹窗已创建并添加到页面'); // 添加调试日志
+      
+      // 检查事件绑定
+      setTimeout(() => {
+        const buttons = modal.querySelectorAll('.switch-mode-btn');
+        console.log('找到切换按钮数量:', buttons.length);
+        
+        buttons.forEach((button, index) => {
+          console.log(`按钮 ${index + 1} 的 onclick 属性:`, button.getAttribute('onclick'));
+          
+          // 添加额外的点击事件监听器作为备用
+          button.addEventListener('click', function(e) {
+            console.log('按钮被点击（通过addEventListener）');
+            const imgElement = this.parentElement.querySelector('.outfit-image');
+            console.log('找到的imgElement:', imgElement);
+            if (imgElement) {
+              toggleImageMode(imgElement);
+            }
+          });
+        });
+      }, 100);
+      
+      // 添加显示动画
+      setTimeout(() => {
+        const content = document.getElementById('recomModalContent');
+        if (content) {
+          content.style.transform = 'scale(1) translateY(0)';
+          content.style.opacity = '1';
+        }
+      }, 10);
+      
+      // 点击遮罩关闭
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeRecomModal();
+      });
+    }
+
+    // 关闭推荐搭配弹窗
+    function closeRecomModal() {
+      const modal = document.getElementById('recomModal');
+      const content = document.getElementById('recomModalContent');
+      
+      if (content) {
+        content.style.transform = 'scale(0.8) translateY(-20px)';
+        content.style.opacity = '0';
+      }
+      
+      setTimeout(() => {
+        if (modal && modal.parentNode) {
+          modal.remove();
+        }
+      }, 400);
+    }
+    
+    // 显示通知提示
+    function showNotification(message, type = 'info') {
+      // 移除之前的通知
+      const existingNotification = document.querySelector('.notification');
+      if (existingNotification) {
+        existingNotification.remove();
+      }
+      
+      // 创建新通知
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      
+      // 根据类型添加图标
+      let icon = '';
+      if (type === 'loading') {
+        icon = '<div class="loading-spinner"></div>';
+      } else if (type === 'success') {
+        icon = '✅ ';
+      } else if (type === 'error') {
+        icon = '❌ ';
+      }
+      
+      notification.innerHTML = `${icon}${message}`;
+      
+      // 添加到页面
+      document.body.appendChild(notification);
+      
+      // 显示动画
+      setTimeout(() => {
+        notification.classList.add('show');
+      }, 10);
+      
+      // 自动隐藏（除了loading类型）
+      if (type !== 'loading') {
+        setTimeout(() => {
+          notification.classList.add('hide');
+          setTimeout(() => {
+            if (notification.parentNode) {
+              notification.remove();
+            }
+          }, 300);
+        }, 3000);
+      }
+      
+      return notification;
+    }
+
+    // 处理搭配图片点击事件
+    async function handleOutfitImageClick(baseFilename, coordFilename, imgElement) {
+      console.log('=== 处理搭配图片点击事件 ===');
+      console.log('基础文件名:', baseFilename);
+      console.log('搭配文件名:', coordFilename);
+      
+      // 检查当前显示的是搭配图还是试穿图
+      const isShowingFit = imgElement.getAttribute('data-showing-fit') === 'true';
+      
+      if (isShowingFit) {
+        // 当前显示试穿图，切换回搭配图
+        await switchToCoordMode(imgElement, baseFilename, coordFilename);
+        return;
+      }
+      
+      // 检查是否存在对应的试穿图像
+      const fitFilename = coordFilename.replace('.jpg', '_FIT.jpg');
+      const fitPath = `/static/recoms/${baseFilename}/${fitFilename}`;
+      const coordPath = `/static/recoms/${baseFilename}/${coordFilename}`;
+      
+      console.log('试穿图像路径:', fitPath);
+      console.log('搭配图像路径:', coordPath);
+      
+      // 检查试穿图像是否存在
+      try {
+        // 添加时间戳避免缓存
+        const fitPathWithTimestamp = fitPath + '?t=' + Date.now();
+        console.log('检查FIT文件（带时间戳）:', fitPathWithTimestamp);
+        
+        const fitResponse = await fetch(fitPathWithTimestamp, { 
+          method: 'HEAD',
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        });
+        
+        console.log('FIT文件检查响应状态:', fitResponse.status);
+        console.log('FIT文件检查响应头:', Object.fromEntries(fitResponse.headers.entries()));
+        
+        const fitExists = fitResponse.ok;
+        
+        console.log('FIT文件检查结果:', fitExists ? '存在' : '不存在');
+        
+        if (fitExists) {
+          console.log('试穿图像存在，切换到试穿效果');
+          // 试穿图像存在，切换到试穿效果
+          await switchToFitMode(imgElement, fitPathWithTimestamp);
+        } else {
+          console.log('试穿图像不存在，生成试穿效果');
+          // 试穿图像不存在，生成试穿效果
+          await generateTryOnImage(baseFilename, coordFilename, imgElement);
+        }
+      } catch (error) {
+        console.log('检查试穿图像失败，生成新的试穿效果:', error);
+        // 检查失败，生成新的试穿效果
+        await generateTryOnImage(baseFilename, coordFilename, imgElement);
+      }
+    }
+
+    // 切换到试穿模式
+    async function switchToFitMode(imgElement, fitPath) {
+      console.log('=== 切换到试穿模式 ===');
+      console.log('传入的fitPath:', fitPath);
+      
+      // 添加切换动画
+      imgElement.classList.add('switching');
+      
+      // 等待动画开始
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 切换图片源（如果路径已经包含时间戳，就直接使用）
+      let fitPathWithTimestamp = fitPath;
+      if (!fitPath.includes('?t=')) {
+        const timestamp = Date.now();
+        fitPathWithTimestamp = fitPath.includes('?') ? 
+          fitPath + '&t=' + timestamp : 
+          fitPath + '?t=' + timestamp;
+      }
+      
+      console.log('最终使用的图片路径:', fitPathWithTimestamp);
+      imgElement.src = fitPathWithTimestamp;
+      imgElement.setAttribute('data-showing-fit', 'true');
+      
+      // 更新样式类
+      imgElement.classList.remove('coord-mode');
+      imgElement.classList.add('fit-mode');
+      
+      // 更新状态指示器
+      const indicator = imgElement.parentElement.querySelector('.mode-indicator');
+      if (indicator) {
+        indicator.textContent = '试穿';
+        indicator.style.background = 'rgba(103, 58, 183, 0.8)';
+      }
+      
+      // 等待动画完成
+      setTimeout(() => {
+        imgElement.classList.remove('switching');
+      }, 600);
+      
+      showNotification('已切换到试穿效果', 'success');
+    }
+
+    // 切换到搭配模式
+    async function switchToCoordMode(imgElement, baseFilename, coordFilename) {
+      // 添加切换动画
+      imgElement.classList.add('switching');
+      
+      // 等待动画开始
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 切换图片源
+      const coordPath = `/static/recoms/${baseFilename}/${coordFilename}`;
+      imgElement.src = coordPath;
+      imgElement.removeAttribute('data-showing-fit');
+      
+      // 更新样式类
+      imgElement.classList.remove('fit-mode');
+      imgElement.classList.add('coord-mode');
+      
+      // 更新状态指示器
+      const indicator = imgElement.parentElement.querySelector('.mode-indicator');
+      if (indicator) {
+        indicator.textContent = '搭配';
+        indicator.style.background = 'rgba(0, 0, 0, 0.7)';
+      }
+      
+      // 等待动画完成
+      setTimeout(() => {
+        imgElement.classList.remove('switching');
+      }, 600);
+      
+      showNotification('已切换回搭配效果', 'success');
+    }
+
+    // 切换图片模式（通过按钮）
+    async function toggleImageMode(imgElement) {
+      const baseFilename = imgElement.getAttribute('data-base');
+      const coordFilename = imgElement.getAttribute('data-filename');
+      const isShowingFit = imgElement.getAttribute('data-showing-fit') === 'true';
+      
+      if (isShowingFit) {
+        await switchToCoordMode(imgElement, baseFilename, coordFilename);
+      } else {
+        const fitFilename = coordFilename.replace('.jpg', '_FIT.jpg');
+        const fitPath = `/static/recoms/${baseFilename}/${fitFilename}`;
+        
+        console.log('=== 开始检查FIT文件 ===');
+        console.log('基础文件名:', baseFilename);
+        console.log('搭配文件名:', coordFilename);
+        console.log('期望的FIT文件:', fitFilename);
+        console.log('FIT文件路径:', fitPath);
+        
+        try {
+          // 添加时间戳避免缓存
+          const fitPathWithTimestamp = fitPath + '?t=' + Date.now();
+          console.log('检查FIT文件（带时间戳）:', fitPathWithTimestamp);
+          
+          const fitResponse = await fetch(fitPathWithTimestamp, { 
+            method: 'HEAD',
+            cache: 'no-cache',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          });
+          
+          console.log('FIT文件检查响应状态:', fitResponse.status);
+          console.log('FIT文件检查响应头:', Object.fromEntries(fitResponse.headers.entries()));
+          
+          const fitExists = fitResponse.ok;
+          
+          console.log('FIT文件检查结果:', fitExists ? '存在' : '不存在');
+          
+          if (fitExists) {
+            console.log('FIT文件存在，切换到试穿模式');
+            await switchToFitMode(imgElement, fitPathWithTimestamp);
+          } else {
+            console.log('FIT文件不存在，立即调用8899端口生成新试穿图像');
+            await generateTryOnImage(baseFilename, coordFilename, imgElement);
+          }
+        } catch (error) {
+          console.log('检查FIT文件失败，立即调用8899端口生成新试穿图像:', error);
+          await generateTryOnImage(baseFilename, coordFilename, imgElement);
+        }
+      }
+    }
+    
+    // 生成试穿图像
+    async function generateTryOnImage(baseFilename, coordFilename, imgElement) {
+      try {
+        console.log('=== 开始生成试穿图像 ===');
+        console.log('基础文件名:', baseFilename);
+        console.log('搭配文件名:', coordFilename);
+        console.log('目标元素:', imgElement);
+        
+        // 添加加载状态
+        imgElement.classList.add('loading');
+        
+        // 显示加载通知
+        showNotification('正在生成试穿效果，请稍候...', 'loading');
+        
+        console.log('调用后端API生成试穿图像...');
+        // 调用后端API生成试穿图像
+        const response = await fetch("{% url 'generate_try_on_image' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({
+            coord_filename: coordFilename,
+            base_filename: baseFilename
+          })
+        });
+        
+        const result = await response.json();
+        console.log('后端API响应:', result);
+        
+        if (result.success) {
+          // 生成成功，显示试穿图像
+          const fitPath = result.fit_path;
+          console.log('试穿图像生成成功，路径:', fitPath);
+          
+          // 添加切换动画
+          imgElement.classList.add('switching');
+          imgElement.classList.remove('loading');
+          
+          // 等待动画开始
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // 切换图片源（添加时间戳避免缓存）
+          const timestamp = Date.now();
+          const fitPathWithTimestamp = fitPath + '?t=' + timestamp;
+          
+          // 确保图片加载完成后再设置src
+          const img = new Image();
+          img.onload = function() {
+            imgElement.src = fitPathWithTimestamp;
+            imgElement.setAttribute('data-showing-fit', 'true');
+            
+            // 更新样式类
+            imgElement.classList.remove('coord-mode');
+            imgElement.classList.add('fit-mode');
+            
+            // 更新状态指示器
+            const indicator = imgElement.parentElement.querySelector('.mode-indicator');
+            if (indicator) {
+              indicator.textContent = '试穿';
+              indicator.style.background = 'rgba(103, 58, 183, 0.8)';
+            }
+            
+            // 等待动画完成
+            setTimeout(() => {
+              imgElement.classList.remove('switching');
+            }, 600);
+            
+            showNotification('试穿效果生成成功！', 'success');
+          };
+          
+          img.onerror = function() {
+            console.error('试穿图像加载失败:', fitPathWithTimestamp);
+            imgElement.classList.remove('loading');
+            showNotification('试穿图像加载失败，请重试', 'error');
+          };
+          
+          // 开始加载图片
+          img.src = fitPathWithTimestamp;
+        } else {
+          // 生成失败
+          imgElement.classList.remove('loading');
+          showNotification('试穿效果生成失败：' + (result.error || '未知错误'), 'error');
+        }
+        
+      } catch (error) {
+        console.error('生成试穿图像失败:', error);
+        imgElement.classList.remove('loading');
+        showNotification('生成试穿效果失败，请重试', 'error');
+      }
+    }
+    
+    // 清除图片缓存
+    async function clearImageCache(baseFilename) {
+      try {
+        console.log('开始清除图片缓存:', baseFilename);
+        
+        // 1. 清除浏览器缓存中的图片
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          for (const cacheName of cacheNames) {
+            const cache = await caches.open(cacheName);
+            const requests = await cache.keys();
+            
+            for (const request of requests) {
+              const url = request.url;
+              // 清除特定目录下的图片缓存
+              if (url.includes(`/static/recoms/${baseFilename}/`)) {
+                await cache.delete(request);
+                console.log('已清除缓存:', url);
+              }
+            }
+          }
+        }
+        
+        // 2. 清除localStorage中的相关数据
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.includes('image') || key.includes('cache') || key.includes(baseFilename))) {
+            localStorage.removeItem(key);
+            console.log('已清除localStorage:', key);
+          }
+        }
+        
+        // 3. 清除sessionStorage中的相关数据
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && (key.includes('image') || key.includes('cache') || key.includes(baseFilename))) {
+            sessionStorage.removeItem(key);
+            console.log('已清除sessionStorage:', key);
+          }
+        }
+        
+        // 4. 温和地清除DOM中的图片缓存（只清除搭配图片，不清除试穿图片）
+        const images = document.querySelectorAll('img');
+        for (const img of images) {
+          const src = img.src;
+          if (src && src.includes(`/static/recoms/${baseFilename}/`) && !src.includes('_FIT.jpg')) {
+            // 只对搭配图片添加时间戳，避免影响试穿图片
+            const separator = src.includes('?') ? '&' : '?';
+            img.src = src + separator + 't=' + Date.now();
+            console.log('强制重新加载搭配图片:', src);
+          }
+        }
+        
+        // 5. 清除fetch缓存（通过发送HEAD请求）
+        const imageUrls = [
+          `/static/recoms/${baseFilename}/${baseFilename}-COORD1.jpg`,
+          `/static/recoms/${baseFilename}/${baseFilename}-COORD2.jpg`,
+          `/static/recoms/${baseFilename}/${baseFilename}-COORD1_FIT.jpg`,
+          `/static/recoms/${baseFilename}/${baseFilename}-COORD2_FIT.jpg`
+        ];
+        
+        for (const url of imageUrls) {
+          try {
+            // 发送HEAD请求强制清除缓存
+            await fetch(url + '?t=' + Date.now(), { 
+              method: 'HEAD',
+              cache: 'no-cache'
+            });
+            console.log('已清除fetch缓存:', url);
+          } catch (error) {
+            console.log('清除fetch缓存失败:', url, error);
+          }
+        }
+        
+        console.log('图片缓存清除完成');
+        return true;
+      } catch (error) {
+        console.error('清除缓存失败:', error);
+        return false;
+      }
+    }
+    
+    // 刷新推荐搭配
+    async function refreshOutfitRecommendations(filename) {
+      try {
+        // 显示加载通知
+        showNotification('正在刷新搭配推荐，请稍候...', 'loading');
+        
+        // 解析基础文件名
+        const baseFilename = filename.replace(/\.[^.]+$/, '');
+        
+        // 调用后端API
+        const response = await fetch("{% url 'refresh_outfit_recommendations' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({
+            garment_filename: filename
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // 刷新成功后清除缓存
+          console.log('搭配刷新成功，开始清除缓存...');
+          await clearImageCache(baseFilename);
+          
+          // 等待一小段时间确保缓存清除完成
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // 重新显示弹窗
+          await showRecomModal(filename);
+          showNotification('搭配推荐刷新成功！已清空旧搭配并清除缓存。', 'success');
+        } else if (result.no_outfits) {
+          // 没有找到搭配
+          showNotification('暂未找到合适的搭配，请稍后再试！', 'error');
+          await showRecomModal(filename); // 重新显示弹窗
+        } else {
+          // 其他错误
+          showNotification('刷新失败：' + (result.error || '未知错误'), 'error');
+          await showRecomModal(filename); // 重新显示弹窗
+        }
+        
+      } catch (error) {
+        console.error('刷新搭配推荐失败:', error);
+        showNotification('刷新失败，请重试', 'error');
+        await showRecomModal(filename); // 重新显示弹窗
+      }
+    }
+  </script>
+    </div>
+</body>
+</html>

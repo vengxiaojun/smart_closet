@@ -1,0 +1,12 @@
+{
+  "id": "ck",
+  "name": "ck",
+  "gender": "男",
+  "age": "20",
+  "height": "169",
+  "weight": "45",
+  "style": "商务",
+  "photo_url": "/static/userinf/ck.jpg",
+  "is_default": false,
+  "default_set_time": 1753452250.5891013
+}

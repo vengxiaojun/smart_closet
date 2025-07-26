@@ -1,0 +1,8 @@
+//
+// Created by bytedance on 2025/2/6.
+//
+
+#ifndef ONESDK_INFER_REALTIME_WEBRTC_H
+#define ONESDK_INFER_REALTIME_WEBRTC_H
+
+#endif //ONESDK_INFER_REALTIME_WEBRTC_H

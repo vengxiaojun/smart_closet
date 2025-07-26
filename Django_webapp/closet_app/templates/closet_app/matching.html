@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+{% load static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#673ab7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>场景搭配 - 智能衣橱</title>
+  <link rel="stylesheet" href="{% static 'closet_app/responsive.css' %}">
+  <script src="{% static 'closet_app/device-adapter.js' %}"></script>
+  <style>
+    /* 重置默认样式 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    /* 为页面主体添加底部边距，防止被固定导航栏遮挡 */
+    body {
+      padding-bottom: 80px;
+      background-color: #E4DCF5;
+    }
+
+    /* 页面容器最大宽度限制 */
+    .page-container {
+      max-width: 440px; /* 比一般手机屏幕(375px)宽约17% */
+      margin: 0 auto;
+      background-color: #E4DCF5;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden; /* 禁用纵向滑动 */
+      touch-action: none; /* 禁用触摸滑动 */
+      -webkit-overflow-scrolling: none; /* 禁用iOS滚动 */
+    }
+
+    /* 手机端禁用滑动 */
+    @media (max-width: 440px) {
+      body {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        -webkit-overflow-scrolling: none;
+      }
+      
+      html {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    /* 在电脑端显示边框效果 */
+    @media (min-width: 441px) {
+      .page-container {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+        margin-top: 20px; /* 在电脑端添加顶部边距 */
+        margin-bottom: 20px; /* 在电脑端添加底部边距 */
+        border-radius: 12px; /* 圆角效果 */
+      }
+    }
+
+    /* 重置 i 标签的斜体样式，确保图标正常显示 */
+    i {
+      font-style: normal;
+    }
+
+
+
+    /* 顶部功能区 */
+    .top-nav {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      background-color: #f8e9c6;
+      padding: 12px 0;
+    }
+
+    .top-nav-item {
+      text-align: center;
+    }
+
+    .top-nav-item i {
+      font-size: 24px;
+      color: #c9a67b;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .top-nav-item span {
+      font-size: 13px;
+      color: #999;
+    }
+
+    /* 场景穿搭标题 */
+    .section-title {
+      background-color: #eee;
+      padding: 12px 16px;
+      font-size: 16px;
+      color: #8b287b;
+      font-weight: 500;
+    }
+
+    /* 场景列表 */
+    .scene-list {
+      list-style: none;
+      margin: 12px 16px;
+    }
+
+    .scene-list li {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 0;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .scene-list li.active {
+      display: block;
+      align-items: center;
+      width: 100%;
+    }
+
+    .scene-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      cursor: pointer;
+    }
+
+    .scene-icon {
+      width: 40px;
+      height: 40px;
+      background-color: #f5b971;
+      border-radius: 6px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      margin-right: 12px;
+    }
+
+    .scene-text {
+      font-size: 15px;
+      color: #333;
+      flex-grow: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .scene-text span {
+      display: block;
+      font-size: 13px;
+      color: #999;
+      margin-top: 2px;
+      white-space: nowrap;
+    }
+
+    /* 箭头指示器 */
+    .arrow-indicator {
+      font-size: 18px;
+      color: #999;
+      transition: transform 0.3s ease;
+    }
+
+    .scene-list li.active .arrow-indicator {
+      transform: rotate(180deg);
+    }
+
+    /* 场景详情（下拉界面） */
+    .scene-detail {
+      background-color: white;
+      border-top: 1px solid #f0f0f0;
+      transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+    }
+
+    .scene-detail.active {
+      max-height: 500px;
+      opacity: 1;
+      padding-top: 12px;
+    }
+
+    .detail-content {
+      padding: 12px;
+      max-height: 300px;   /* 限高300px，可根据需求调整 */
+      overflow-y: auto;    /* 允许垂直滚动 */
+      display: flex;
+      flex-wrap: wrap;     /* 换行 */
+      gap: 12px;           /* 图片间距 */
+      justify-content: space-between;
+    }
+
+    .detail-image {
+      width: 48%;      /* 每张图片占48%，留间隙 */
+      height: auto;    /* 高度自适应，保持比例 */
+      border-radius: 6px;
+      object-fit: contain;  /* 保证图片完整展示，可能留空白 */
+      margin-bottom: 0;
+      background: #f0f0f0; /* 可选，防止透明或空白时背景不好看 */
+    }
+
+    .detail-description {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    /* 底部导航栏 */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 440px; /* 与页面容器保持一致 */
+      height: 60px;
+      background: #fff;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    /* 在电脑端为底部导航栏添加边框效果 */
+    @media (min-width: 441px) {
+      .bottom-nav {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        border-bottom: 1px solid rgba(103, 58, 183, 0.1);
+        border-radius: 0 0 12px 12px; /* 底部圆角 */
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+      }
+    }
+
+    .nav-item {
+      text-align: center;
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      padding: 8px 0;
+      min-height: 60px;
+    }
+    .nav-item:hover {
+      background-color: #f5f5f5;
+    }
+    .nav-item:active {
+      background-color: #e0e0e0;
+    }
+    .nav-item i {
+      font-size: 22px;
+      color: #999;
+      display: block;
+      margin-bottom: 2px;
+      pointer-events: none;
+    }
+    .nav-item span {
+      font-size: 12px;
+      color: #999;
+      pointer-events: none;
+    }
+    .nav-item.active span {
+      color: #673ab7;
+    }
+
+    /* 中间悬浮按钮 */
+    .floating-btn {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 56px;
+      height: 56px;
+      background: #673ab7;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+  </style>
+</head>
+<body>
+    <div class="page-container">
+      <!-- 顶部功能区 -->
+      <div class="top-nav">
+      <div class="top-nav-item">
+        <i>🎁</i>
+        <span>穿搭场合</span>
+      </div>
+      <div class="top-nav-item">
+        <i>🔍</i>
+        <span>穿搭搜索</span>
+      </div>
+      <div class="top-nav-item">
+        <i>🪞</i>
+        <span>试衣镜</span>
+      </div>
+    </div>
+
+    <!-- 场景穿搭标题 -->
+    <div class="section-title">我的收藏⭐️</div>
+
+    <!-- 场景列表 -->
+    {% load static %}
+    <ul class="scene-list">
+
+      <!-- 日常休闲 (leisure) -->
+      <li>
+        <div class="scene-header" onclick="toggleDetail(this.parentElement)">
+          <div class="scene-icon">日</div>
+          <div class="scene-text">日常休闲 <span>点击查看穿搭</span></div>
+          <div class="arrow-indicator">▼</div>
+        </div>
+        <div class="scene-detail">
+          <div class="detail-content">
+            {% for img_path in images_dict.leisure %}
+              <img src="{% static img_path %}" alt="日常休闲穿搭" class="detail-image">
+            {% empty %}
+              <p class="detail-description">暂无图片</p>
+            {% endfor %}
+          </div>
+        </div>
+      </li>
+
+      <!-- 工作场合 (working) -->
+      <li>
+        <div class="scene-header" onclick="toggleDetail(this.parentElement)">
+          <div class="scene-icon">工</div>
+          <div class="scene-text">通勤办公 <span>点击查看穿搭</span></div>
+          <div class="arrow-indicator">▼</div>
+        </div>
+        <div class="scene-detail">
+          <div class="detail-content">
+            {% for img_path in images_dict.working %}
+              <img src="{% static img_path %}" alt="通勤办公穿搭" class="detail-image">
+            {% empty %}
+              <p class="detail-description">暂无图片</p>
+            {% endfor %}
+          </div>
+        </div>
+      </li>
+
+      <!-- 运动健身 (sports) -->
+      <li>
+        <div class="scene-header" onclick="toggleDetail(this.parentElement)">
+          <div class="scene-icon">运</div>
+          <div class="scene-text">运动健身 <span>点击查看穿搭</span></div>
+          <div class="arrow-indicator">▼</div>
+        </div>
+        <div class="scene-detail">
+          <div class="detail-content">
+            {% for img_path in images_dict.sports %}
+              <img src="{% static img_path %}" alt="运动健身穿搭" class="detail-image">
+            {% empty %}
+              <p class="detail-description">暂无图片</p>
+            {% endfor %}
+          </div>
+        </div>
+      </li>
+
+      <!-- 派对聚会 (party) -->
+      <li>
+        <div class="scene-header" onclick="toggleDetail(this.parentElement)">
+          <div class="scene-icon">派</div>
+          <div class="scene-text">派对聚会 <span>点击查看穿搭</span></div>
+          <div class="arrow-indicator">▼</div>
+        </div>
+        <div class="scene-detail">
+          <div class="detail-content">
+            {% for img_path in images_dict.party %}
+              <img src="{% static img_path %}" alt="派对聚会穿搭" class="detail-image">
+            {% empty %}
+              <p class="detail-description">暂无图片</p>
+            {% endfor %}
+          </div>
+        </div>
+      </li>
+
+    </ul>
+
+    <!-- 底部导航栏 -->
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <a href="{% url 'index' %}" style="text-decoration: none;">
+          <i>🏠</i>
+          <span>home</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'closet' %}" style="text-decoration: none;">
+          <i>👕</i>
+          <span>closet</span>
+        </a>
+      </div>
+      <div class="nav-item active">
+        <a href="#" style="text-decoration: none;">
+          <i>⭐️</i>
+          <span>favourite</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'profile' %}" style="text-decoration: none;">
+          <i>👤</i>
+          <span>profile</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 中间悬浮按钮 -->
+    <div class="floating-btn">
+      <a href="{% url 'mirror' %}" style="text-decoration: none;">
+        <i>🪞</i>
+      </a>
+    </div>
+   <script>
+    function toggleDetail(liElement) {
+      // liElement 是 <li> 元素
+
+      liElement.classList.toggle('active');
+
+      const detail = liElement.querySelector('.scene-detail');
+      detail.classList.toggle('active');
+
+      // 关闭其他展开项
+      const allItems = document.querySelectorAll('.scene-list li');
+      allItems.forEach(item => {
+        if (item !== liElement && item.classList.contains('active')) {
+          item.classList.remove('active');
+          item.querySelector('.scene-detail').classList.remove('active');
+        }
+      });
+    }
+  </script>
+    </div>
+</body>
+</html>

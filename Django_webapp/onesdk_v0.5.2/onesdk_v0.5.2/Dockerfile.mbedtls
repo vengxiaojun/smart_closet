@@ -1,0 +1,61 @@
+# docker build --platform=linux/amd64  . -f Dockerfile.esp32  -t hub.byted.org/vei/onesdk_esp32:v5.4
+FROM hub.byted.org/codebase/ci_debian_bullseye:latest
+
+# 安装基础编译工具链
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    make \
+    cmake \
+    lcov \
+    git \
+    pkg-config \
+    wget \
+    unzip \
+    git \
+    wget \
+    flex \
+    bison \
+    gperf \
+    python3 \
+    python3-pip \
+    python3-venv \
+    cmake \
+    ninja-build \
+    ccache \
+    libffi-dev \
+    libssl-dev \
+    dfu-util \
+    libusb-1.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# 新增 mbedtls 源码编译安装
+RUN git clone --depth 1 --branch mbedtls-3.4.0 https://github.com/Mbed-TLS/mbedtls.git /opt/mbedtls && \
+    cd /opt/mbedtls && \
+    mkdir build && cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_SHARED_MBEDTLS_LIBRARY=On .. && \
+    make -j$(nproc) && \
+    make install && \
+    ldconfig
+
+# RUN mkdir -p /opt/esp && \
+#     cd /opt/esp && \
+#     git clone -b release/v5.4 --recursive https://github.com/espressif/esp-idf.git && \
+#     cd $IDF_PATH && \
+#     ./install.sh esp32
+
+# # 设置环境变量
+# # ENV PATH="$PATH:/opt/esp/xtensa-esp32-elf/bin"
+# # ENV IDF_TOOLS_PATH=/opt/esp
+# RUN cd $IDF_PATH && . ./export.sh
+
+# 创建工作目录
+WORKDIR /app
+
+# 复制项目文件到容器中
+# COPY . .
+
+# 构建 ESP32 项目
+# RUN . $IDF_PATH/export.sh && idf.py build

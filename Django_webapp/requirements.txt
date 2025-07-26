@@ -1,0 +1,9 @@
+Django>=4.0.0
+Pillow>=9.0.0
+requests>=2.25.0
+websockets>=10.0
+cozepy>=0.1.0
+rembg>=2.0.0
+numpy>=1.21.0
+django-extensions>=3.2.0
+pyOpenSSL>=23.0.0 

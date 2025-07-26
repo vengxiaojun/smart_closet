@@ -1,0 +1,1 @@
+请参考 [【外部】边缘智能-OneSDK集成说明](https://bytedance.larkoffice.com/wiki/VlHsw5p76i1iSUkOcXJclg4Nnaf) 进行相关构建和开发工作

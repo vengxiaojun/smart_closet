@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+{% load static %}
+<head>
+  <meta charset="UTF-8" />
+  <!-- 适配移动端，设置视口 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#673ab7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>个人中心 - 智能衣橱</title>
+  <link rel="stylesheet" href="{% static 'closet_app/responsive.css' %}">
+  <script src="{% static 'closet_app/device-adapter.js' %}"></script>
+  <style>
+    /* 重置默认样式，方便统一控制 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    /* 为页面主体添加底部边距，防止被固定导航栏遮挡 */
+    body {
+      padding-bottom: 80px;
+      background-color: #E4DCF5;
+    }
+
+    /* 页面容器最大宽度限制 */
+    .page-container {
+      max-width: 440px; /* 比一般手机屏幕(375px)宽约17% */
+      margin: 0 auto;
+      background-color: #E4DCF5;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden; /* 禁用纵向滑动 */
+      touch-action: none; /* 禁用触摸滑动 */
+      -webkit-overflow-scrolling: none; /* 禁用iOS滚动 */
+    }
+
+    /* 手机端禁用滑动 */
+    @media (max-width: 440px) {
+      body {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        -webkit-overflow-scrolling: none;
+      }
+      
+      html {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    /* 在电脑端显示边框效果 */
+    @media (min-width: 441px) {
+      .page-container {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+        margin-top: 20px; /* 在电脑端添加顶部边距 */
+        margin-bottom: 20px; /* 在电脑端添加底部边距 */
+        border-radius: 12px; /* 圆角效果 */
+      }
+    }
+
+    /* 重置 i 标签的斜体样式，确保图标正常显示 */
+    i {
+      font-style: normal;
+    }
+
+    /* 顶部背景图区域 */
+    .header {
+      width: 100%;
+      height: 200px;
+      background: url('https://th.bing.com/th/id/R.c9b78a30cca10670011a4d7fa214fff1?rik=X5cMbIXIGY39bA&riu=http%3a%2f%2fpic.616pic.com%2fbg_w1180%2f00%2f02%2f13%2fO0n24hjcGH.jpg!%2ffw%2f1120&ehk=YKswPr5no8ymZf3Iywiba8pGEAUm9ylb%2fkO3F3T7ipo%3d&risl=&pid=ImgRaw&r=0') center/cover no-repeat;
+      position: relative;
+      padding-top: 20px;
+    }
+    /* 用户头像 + 昵称布局 */
+    .user-info {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 0 20px;
+    }
+    .avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: url('https://tse3.mm.bing.net/th/id/OIP.xHi99XtEH9P3sTcBsPoVegAAAA?rs=1&pid=ImgDetMain&o=7&rm=3') center/cover no-repeat;
+      margin-right: 12px;
+    }
+    .nickname {
+      font-size: 17px;
+      color: #333;
+      font-weight: 500;
+    }
+    /* 统计数据（衣服、搭配等） */
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+      color: #7948EA;
+    }
+    .stats-item {
+      text-align: center;
+    }
+    .stats-number {
+      font-size: 16px;
+      color: #7948EA;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* 功能模块容器，通用卡片样式 */
+    .card {
+      background: #fff;
+      margin: 12px 16px;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    .card-title {
+      font-size: 16px;
+      color: #333;
+      font-weight: 500;
+      margin-bottom: 12px;
+    }
+    /* 衣服设置：图标+文字布局 */
+    .clothes-setting {
+      display: flex;
+      justify-content: space-around;
+    }
+    .setting-item {
+      text-align: center;
+      width: 25%;
+    }
+    .setting-item i {
+      display: block;
+      width: 40px;
+      height: 40px;
+      background: #F7F6E9;
+      border-radius: 8px;
+      margin: 0 auto 6px;
+      /* 可替换为实际图标字体或图片背景 */
+      line-height: 40px;
+      color: #999;
+      font-size: 20px;
+    }
+    .setting-item span {
+      font-size: 13px;
+      color: #666;
+    }
+
+    /* 日程助手模块 */
+    .schedule-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .schedule-text {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.4;
+    }
+    .schedule-btn {
+      color: #8bc34a;
+      font-size: 15px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    /* 其他功能模块 */
+    .other-functions {
+      display: flex;
+      justify-content: space-around;
+    }
+    .function-item {
+      text-align: center;
+      width: 25%;
+    }
+    .function-item i {
+      display: block;
+      width: 36px;
+      height: 36px;
+      background: #eee;
+      border-radius: 8px;
+      margin: 0 auto 4px;
+      line-height: 36px;
+      color: #999;
+      font-size: 18px;
+    }
+    .function-item span {
+      font-size: 13px;
+      color: #666;
+      display: block;
+    }
+
+    /* 底部导航栏 */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 440px; /* 与页面容器保持一致 */
+      height: 60px;
+      background: #fff;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    /* 在电脑端为底部导航栏添加边框效果 */
+    @media (min-width: 441px) {
+      .bottom-nav {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        border-bottom: 1px solid rgba(103, 58, 183, 0.1);
+        border-radius: 0 0 12px 12px; /* 底部圆角 */
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+      }
+    }
+    .nav-item {
+      text-align: center;
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      padding: 8px 0;
+      min-height: 60px;
+    }
+    .nav-item:hover {
+      background-color: #f5f5f5;
+    }
+    .nav-item:active {
+      background-color: #e0e0e0;
+    }
+    .nav-item i {
+      font-size: 22px;
+      color: #999;
+      display: block;
+      margin-bottom: 2px;
+      pointer-events: none;
+    }
+    .nav-item span {
+      font-size: 12px;
+      color: #999;
+      pointer-events: none;
+    }
+    /* 突出当前激活项（示例给 Profile 加蓝色） */
+    .nav-item.active span {
+      color: #673ab7;
+    }
+
+    /* 中间悬浮按钮 */
+    .floating-btn {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 56px;
+      height: 56px;
+      background: #673ab7;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+
+    /* 新增模态框样式 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 350px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .close {
+      color: #999;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      transition: color 0.3s;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: #333;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .user-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .user-form input,
+    .user-form select,
+    .user-form button {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .user-form input:focus,
+    .user-form select:focus {
+      outline: none;
+      border-color: #673ab7;
+    }
+
+    .user-form button {
+      background-color: #673ab7;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .user-form button:hover {
+      background-color: #512e91;
+    }
+
+    /* 新增：照片上传区域样式 */
+    .photo-upload-section {
+      border: 2px dashed #ddd;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      background-color: #f9f9f9;
+      margin: 12px 0;
+      transition: border-color 0.3s;
+    }
+
+    .photo-upload-section:hover {
+      border-color: #673ab7;
+      background-color: #f0f0f0;
+    }
+
+    .photo-upload-title {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+
+    .photo-upload-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .photo-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .upload-btn {
+      background: linear-gradient(135deg, #673ab7, #9c27b0);
+      color: white;
+    }
+
+    .upload-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(103, 58, 183, 0.3);
+    }
+
+    .camera-btn {
+      background: linear-gradient(135deg, #2196f3, #1976d2);
+      color: white;
+    }
+
+    .camera-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+    }
+
+    .camera-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .close-camera-btn {
+      background: linear-gradient(135deg, #f44336, #d32f2f);
+      color: white;
+    }
+
+    .close-camera-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+    }
+
+    .capture-btn {
+      background: linear-gradient(135deg, #4caf50, #388e3c);
+      color: white;
+    }
+
+    .capture-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+    }
+
+    .capture-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* 视频预览区域 */
+    .video-container {
+      margin: 12px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .video-container video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* 隐藏文件输入框 */
+    .hidden-input {
+      display: none;
+    }
+
+    /* 添加用户按钮样式 */
+    .add-user-btn {
+      background: linear-gradient(135deg, #673ab7, #9c27b0);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.3);
+      transition: all 0.3s ease;
+      margin-bottom: 16px;
+    }
+
+    .add-user-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(103, 58, 183, 0.4);
+    }
+
+    .add-user-btn:active {
+      transform: translateY(0);
+    }
+
+    .user-list {
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      background-color: #f9f9f9;
+    }
+
+    .user-photo {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      object-fit: cover;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-info-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .user-info-text p {
+      font-size: 13px;
+      color: #333;
+    }
+
+    .user-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 80px; /* 确保按钮容器有固定宽度 */
+    }
+
+    .user-actions button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: opacity 0.3s;
+      width: 100%; /* 让所有按钮占满容器宽度 */
+      min-height: 28px; /* 确保按钮高度一致 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap; /* 防止文字换行 */
+    }
+
+    .user-actions button:hover {
+      opacity: 0.9;
+    }
+
+    .user-actions .edit-btn {
+      background-color: #2196f3;
+      color: white;
+    }
+
+    .user-actions .delete-btn {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .user-actions .default-btn {
+      background-color: #673ab7;
+      color: white;
+    }
+
+    .user-actions .default-btn.disabled {
+      background-color: #ccc;
+      color: #666;
+      cursor: not-allowed;
+    }
+
+    /* 默认用户背景样式 */
+    .user-item.default-user {
+      background-color: rgba(103, 58, 183, 0.1);
+      border-color: #673ab7;
+    }
+
+    /* 通知提示样式 */
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 2000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+      max-width: 300px;
+      text-align: center;
+    }
+
+    .notification.success {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    .notification.error {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .notification.info {
+      background-color: #2196f3;
+      color: white;
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .notification.hide {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+  </style>
+</head>
+<body>
+    <div class="page-container">
+      <!-- 顶部背景+用户信息区域 -->
+      <div class="header">
+      <div class="user-info">
+        <div class="avatar"></div>
+        <div class="nickname">用户——21hegkj367</div>
+      </div>
+      <div class="stats">
+        <div class="stats-item">
+          <span class="stats-number">27</span>
+          <span>衣服</span>
+        </div>
+        <div class="stats-item">
+          <span class="stats-number">6</span>
+          <span>收藏穿搭</span>
+        </div>
+        <div class="stats-item">
+          <span class="stats-number">暂无</span>
+          <span>日程</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 衣服设置卡片 -->
+    <div class="card">
+      <div class="card-title">衣服设置</div>
+      <div class="clothes-setting">
+        <div class="setting-item">
+          <i>📖</i>
+          <span>衣橱设置</span>
+        </div>
+        <div class="setting-item">
+          <i>🔲</i>
+          <span>衣物分类</span>
+        </div>
+        <div class="setting-item">
+          <i>🎁</i>
+          <span>衣物场合</span>
+        </div>
+        <div class="setting-item">
+          <i>👚</i>
+          <span>衣物属性</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日程助手卡片 -->
+    <div class="card">
+      <div class="schedule-box">
+        <div class="schedule-text">
+          <div>日程助手</div>
+          <div>记录美好生活，穿搭日程助手</div>
+        </div>
+        <a href="#" class="schedule-btn">进入日程</a>
+      </div>
+    </div>
+
+    <!-- 其他功能卡片 -->
+    <div class="card">
+      <div class="card-title">其他功能</div>
+      <div class="other-functions">
+        <div class="function-item" onclick="openUserModal()">
+          <i>👤</i>
+          <span>个人信息</span>
+        </div>
+        <div class="function-item">
+          <i>💡</i>
+          <span>功能建议</span>
+        </div>
+        <div class="function-item">
+          <i>📞</i>
+          <span>联系我们</span>
+        </div>
+        <div class="function-item">
+          <i>🚪</i>
+          <span>退出登录</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="userModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeUserModal()">&times;</span>
+        <button onclick="showUserForm()" class="add-user-btn">
+          <span>➕</span>
+          <span>添加用户</span>
+        </button>
+        <div id="userForm" class="user-form" style="display: none;">
+          <input type="text" id="name" placeholder="姓名">
+          <select id="gender">
+            <option value="男">男</option>
+            <option value="女">女</option>
+          </select>
+          <input type="number" id="age" placeholder="年龄">
+          <input type="number" id="height" placeholder="身高(cm)">
+          <input type="number" id="weight" placeholder="体重(kg)">
+          
+          <!-- 照片上传区域 -->
+          <div class="photo-upload-section">
+            <div class="photo-upload-title">请上传个人真实全身照</div>
+            <div class="photo-upload-buttons">
+              <button type="button" class="photo-btn upload-btn" onclick="document.getElementById('photo').click()">
+                <span>📁</span>
+                <span>选择文件</span>
+              </button>
+              <button type="button" class="photo-btn camera-btn" onclick="openCamera()">
+                <span>📷</span>
+                <span>拍摄照片</span>
+              </button>
+            </div>
+            <!-- 隐藏的文件输入框 -->
+            <input type="file" id="photo" accept="image/*" class="hidden-input">
+          </div>
+          
+          <!-- 视频预览区域 -->
+          <div id="videoContainer" class="video-container" style="display: none;">
+            <video id="video" autoplay muted></video>
+            <div class="photo-upload-buttons" style="margin-top: 8px;">
+              <button type="button" id="captureBtn" class="photo-btn capture-btn" onclick="capturePhoto()">
+                <span>📸</span>
+                <span>拍照</span>
+              </button>
+              <button type="button" id="closeCameraBtn" class="photo-btn close-camera-btn" onclick="closeCamera()">
+                <span>❌</span>
+                <span>关闭</span>
+              </button>
+            </div>
+          </div>
+          
+          <select id="style">
+            <option value="休闲">休闲</option>
+            <option value="商务">商务</option>
+            <option value="运动">运动</option>
+          </select>
+          <button onclick="saveUser()" class="user-form button">保存</button>
+        </div>
+        <div class="user-list" id="userList"></div>
+      </div>
+    </div>
+
+    <!-- 底部导航栏 -->
+    <div class="floating-btn">
+      <a href="{% url 'mirror' %}" style="text-decoration: none;">
+        <i>🪞</i>
+      </a>
+    </div>
+
+    <!-- 底部导航栏 -->
+    {% load static %}
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <a href="{% url 'index' %}" style="text-decoration: none;">
+          <i>🏠</i>
+          <span>Home</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'closet' %}" style="text-decoration: none;">
+          <i>👕</i>
+          <span>closet</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'match' %}" style="text-decoration: none;">
+          <i>⭐️</i>
+          <span>favourite</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'profile' %}" style="text-decoration: none;">
+          <i>👤</i>
+          <span>profile</span>
+        </a>
+      </div>
+    </div>
+  <script>
+    let currentUserId = null;
+    let stream = null;
+
+    // 显示通知提示
+    function showNotification(message, type = 'info') {
+      // 移除之前的通知
+      const existingNotification = document.querySelector('.notification');
+      if (existingNotification) {
+        existingNotification.remove();
+      }
+      
+      // 创建新通知
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      
+      // 根据类型添加图标
+      let icon = '';
+      if (type === 'success') {
+        icon = '✅ ';
+      } else if (type === 'error') {
+        icon = '❌ ';
+      } else if (type === 'info') {
+        icon = 'ℹ️ ';
+      }
+      
+      notification.innerHTML = `${icon}${message}`;
+      
+      // 添加到页面
+      document.body.appendChild(notification);
+      
+      // 显示动画
+      setTimeout(() => {
+        notification.classList.add('show');
+      }, 10);
+      
+      // 自动隐藏
+      setTimeout(() => {
+        notification.classList.add('hide');
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove();
+          }
+        }, 300);
+      }, 3000);
+      
+      return notification;
+    }
+
+    function openUserModal() {
+      document.getElementById('userModal').style.display = "block";
+      loadUsers();
+    }
+
+    function closeUserModal() {
+      document.getElementById('userModal').style.display = "none";
+      document.getElementById('userForm').style.display = "none";
+      currentUserId = null;
+      closeCamera(); // 关闭摄像头
+    }
+
+    function showUserForm() {
+      currentUserId = null;
+      document.getElementById('name').value = '';
+      document.getElementById('gender').value = '男';
+      document.getElementById('age').value = '';
+      document.getElementById('height').value = '';
+      document.getElementById('weight').value = '';
+      document.getElementById('photo').value = '';
+      document.getElementById('style').value = '休闲';
+      document.getElementById('userForm').style.display = "block";
+    }
+
+    function saveUser() {
+      const name = document.getElementById('name').value;
+      const gender = document.getElementById('gender').value;
+      const age = document.getElementById('age').value;
+      const height = document.getElementById('height').value;
+      const weight = document.getElementById('weight').value;
+      const photo = document.getElementById('photo').files[0];
+      const style = document.getElementById('style').value;
+
+      // 验证必填字段
+      if (!name || !gender || !age || !height || !weight) {
+        showNotification('请填写所有必填信息', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('gender', gender);
+      formData.append('age', age);
+      formData.append('height', height);
+      formData.append('weight', weight);
+      formData.append('photo', photo);
+      formData.append('style', style);
+
+      if (currentUserId) {
+        formData.append('id', currentUserId);
+      }
+
+      fetch("{% url 'save_user' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification('用户信息保存成功！', 'success');
+          loadUsers();
+          document.getElementById('userForm').style.display = "none";
+        } else {
+          showNotification('保存失败：' + (data.error || '未知错误'), 'error');
+        }
+      })
+      .catch(error => {
+        console.error('保存用户信息失败:', error);
+        showNotification('保存失败，请重试', 'error');
+      });
+    }
+
+    function loadUsers() {
+      fetch("{% url 'load_users' %}")
+      .then(response => response.json())
+      .then(data => {
+        const userList = document.getElementById('userList');
+        userList.innerHTML = '';
+        
+        data.users.forEach(user => {
+          const userItem = document.createElement('div');
+          userItem.className = 'user-item';
+          
+          // 如果是默认用户，添加默认用户样式
+          if (user.is_default) {
+            userItem.classList.add('default-user');
+          }
+          
+          const isDefault = user.is_default;
+          const defaultBtnText = isDefault ? '已设为默认' : '设为默认';
+          const defaultBtnClass = isDefault ? 'default-btn disabled' : 'default-btn';
+          
+          userItem.innerHTML = `
+            <img class="user-photo" src="${user.photo_url}" alt="用户照片">
+            <div class="user-info-text">
+              <p>姓名: ${user.name}</p>
+              <p>性别: ${user.gender}</p>
+              <p>年龄: ${user.age}</p>
+              <p>身高: ${user.height}cm</p>
+              <p>体重: ${user.weight}kg</p>
+              <p>风格: ${user.style}</p>
+            </div>
+            <div class="user-actions">
+              <button class="edit-btn" onclick="editUser('${user.id}')">编辑</button>
+              <button class="delete-btn" onclick="deleteUser('${user.id}')">删除</button>
+              <button class="${defaultBtnClass}" onclick="setDefaultUser('${user.id}')" ${isDefault ? 'disabled' : ''}>${defaultBtnText}</button>
+            </div>
+          `;
+          userList.appendChild(userItem);
+        });
+      });
+    }
+
+    function editUser(id) {
+      currentUserId = id;
+      fetch(`{% url 'get_user' %}?id=${id}`)
+      .then(response => response.json())
+      .then(data => {
+        document.getElementById('name').value = data.name;
+        document.getElementById('gender').value = data.gender;
+        document.getElementById('age').value = data.age;
+        document.getElementById('height').value = data.height;
+        document.getElementById('weight').value = data.weight;
+        document.getElementById('style').value = data.style;
+        document.getElementById('userForm').style.display = "block";
+      });
+    }
+
+    function deleteUser(id) {
+      if (confirm('确定要删除该用户吗？')) {
+        fetch(`{% url 'delete_user' %}?id=${id}`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            loadUsers();
+          }
+        });
+      }
+    }
+
+    function setDefaultUser(id) {
+        fetch("{% url 'set_default_user' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({
+            user_id: id
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showNotification('已将用户设为默认用户！', 'success');
+            loadUsers();
+          } else {
+            showNotification('设置默认用户失败：' + (data.error || '未知错误'), 'error');
+          }
+        })
+        .catch(error => {
+          console.error('设置默认用户失败:', error);
+          showNotification('设置默认用户失败，请重试', 'error');
+        });
+      
+    }
+
+    // 打开摄像头
+    function openCamera() {
+      const video = document.getElementById('video');
+      const videoContainer = document.getElementById('videoContainer');
+      const captureBtn = document.getElementById('captureBtn');
+      const closeCameraBtn = document.getElementById('closeCameraBtn');
+      const photoInput = document.getElementById('photo');
+
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+          .then(function(newStream) {
+            stream = newStream;
+            video.srcObject = stream;
+            video.addEventListener('canplay', function() {
+              video.play();
+              videoContainer.style.display = 'block';
+              captureBtn.disabled = false;
+              closeCameraBtn.disabled = false;
+            }, { once: true });
+          })
+          .catch(function(error) {
+            console.error('访问摄像头失败:', error);
+            showNotification('无法访问摄像头，请检查权限设置。', 'error');
+          });
+      } else {
+        showNotification('您的浏览器不支持摄像头功能。', 'error');
+      }
+    }
+
+    // 拍照
+    function capturePhoto() {
+      const video = document.getElementById('video');
+      const photoInput = document.getElementById('photo');
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || video.clientWidth;
+      canvas.height = video.videoHeight || video.clientHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(function(blob) {
+        const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        photoInput.files = dataTransfer.files;
+        closeCamera();
+      }, 'image/jpeg');
+    }
+
+    // 关闭摄像头
+    function closeCamera() {
+      const video = document.getElementById('video');
+      const videoContainer = document.getElementById('videoContainer');
+      const captureBtn = document.getElementById('captureBtn');
+      const closeCameraBtn = document.getElementById('closeCameraBtn');
+
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+
+      videoContainer.style.display = 'none';
+      captureBtn.disabled = true;
+      closeCameraBtn.disabled = true;
+    }
+  </script>
+    </div>
+</body>
+</html>

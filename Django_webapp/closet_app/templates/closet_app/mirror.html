@@ -1,0 +1,3336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+{% load static %}
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#673ab7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>搭配魔镜 - 智能搭配助手</title>
+  <link rel="stylesheet" href="{% static 'closet_app/responsive.css' %}">
+  <script src="{% static 'closet_app/device-adapter.js' %}"></script>
+  <style>
+    /* 重置默认样式，方便统一控制 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+
+    /* 为页面主体添加底部边距，防止被固定导航栏遮挡 */
+    body {
+      padding-bottom: 80px;
+      background-color: #E4DCF5;
+    }
+
+    /* 页面容器最大宽度限制 */
+    .page-container {
+      max-width: 440px; /* 比一般手机屏幕(375px)宽约17% */
+      margin: 0 auto;
+      background-color: #E4DCF5;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden; /* 禁用纵向滑动 */
+      touch-action: none; /* 禁用触摸滑动 */
+      -webkit-overflow-scrolling: none; /* 禁用iOS滚动 */
+    }
+
+    /* 手机端禁用滑动 */
+    @media (max-width: 440px) {
+      body {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        -webkit-overflow-scrolling: none;
+      }
+      
+      html {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    /* 在电脑端显示边框效果 */
+    @media (min-width: 441px) {
+      .page-container {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+        margin-top: 20px; /* 在电脑端添加顶部边距 */
+        margin-bottom: 20px; /* 在电脑端添加底部边距 */
+        border-radius: 12px; /* 圆角效果 */
+      }
+    }
+
+    /* 重置 i 标签的斜体样式，确保图标正常显示 */
+    i {
+      font-style: normal;
+    }
+
+
+
+    /* 标题栏 */
+    .title-bar {
+      background: url("https://tse2.mm.bing.net/th/id/OIP.lM5MtEwr1UPCH47MeRafWAHaEG?rs=1&pid=ImgDetMain&o=7&rm=3");
+      padding: 16px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .title {
+      font-size: 28px;
+      color: #E4DCF5;
+      font-weight: bold;
+    }
+
+
+
+    /* 选择框区域 */
+    .select-section {
+      padding: 24px;
+    }
+
+    .select-box {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #a1b5d0;
+      border: 1px solid #c6f6f1;
+      border-radius: 14px;
+      padding: 14px 20px;
+      margin-bottom: 30px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .select-box span {
+      font-size: 16px;
+      color: #333;
+    }
+
+    .select-box i {
+      font-size: 16px;
+      color: #333;
+      transition: transform 0.3s ease;
+    }
+
+    /* 下拉菜单 */
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      margin-top: 8px;
+      padding: 8px 0;
+      z-index: 999;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+
+    .dropdown-menu li {
+      padding: 8px 20px;
+      font-size: 14px;
+      color: #333;
+      list-style: none;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-menu li:hover {
+      background-color: #f0f0f0;
+    }
+
+    /* 展开时箭头向上 */
+    .select-box.open i {
+      transform: rotate(180deg);
+    }
+
+    .select-box.open .dropdown-menu {
+      display: block;
+    }
+
+    /* 输入与语音区域 */
+    .input-section {
+      padding: 0 18px;
+      position: relative;
+    }
+
+    .voice-btn {
+      width: 56px;
+      height: 56px;
+      background-color: #ccc;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 70px;
+      cursor: pointer;
+      /* 增加触摸区域 */
+      min-height: 56px;
+      min-width: 56px;
+      /* 防止文本选中 */
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      /* 移除点击高亮 */
+      -webkit-tap-highlight-color: transparent;
+      /* 确保在移动设备上有足够的点击区域 */
+      padding: 8px;
+      /* 增加触摸响应 */
+      touch-action: manipulation;
+    }
+
+    .voice-btn i {
+      background-color: transparent;
+      border-radius: 0;
+      margin-left: 0;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .input-box {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      margin-bottom: 70px;
+      background-color: #e6e6e6;
+      border-radius: 20px;
+      padding: 8px 12px;
+    }
+
+    .input-box input {
+      border: none;
+      outline: none;
+      background-color: transparent;
+      font-size: 14px;
+      color: #333;
+      flex: 1;
+    }
+
+    .send-btn {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 48px;
+      height: 48px;
+      margin-left: auto;
+      margin-right: auto;
+      cursor: pointer;
+      /* 增加触摸区域 */
+      min-height: 48px;
+      min-width: 48px;
+      /* 防止文本选中 */
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      /* 移除点击高亮 */
+      -webkit-tap-highlight-color: transparent;
+      /* 确保在移动设备上有足够的点击区域 */
+      padding: 8px;
+      /* 增加触摸响应 */
+      touch-action: manipulation;
+    }
+
+    .send-btn img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      transition: all 0.3s ease;
+    }
+    
+    .send-btn.retry-mode img {
+      transform: rotate(180deg);
+    }
+    
+    .send-btn.retry-mode {
+      background: linear-gradient(135deg, rgba(103, 58, 183, 0.7), rgba(156, 39, 176, 0.7));
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.2);
+    }
+    
+    .send-btn.retry-mode:active {
+      transform: scale(0.95) rotate(180deg);
+      transition: all 0.2s ease;
+    }
+    
+    .send-btn.retry-mode:active img {
+      transform: rotate(180deg);
+      transition: all 0.2s ease;
+    }
+    
+    .send-btn.retry-mode.rotating {
+      animation: rotate360 0.8s ease-in-out;
+    }
+    
+    .send-btn.retry-mode.rotating img {
+      animation: rotate360 0.8s ease-in-out;
+    }
+    
+    @keyframes rotate360 {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* 底部导航栏（复用通用样式） */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 440px; /* 与页面容器保持一致 */
+      height: 60px;
+      background: #fff;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    /* 在电脑端为底部导航栏添加边框效果 */
+    @media (min-width: 441px) {
+      .bottom-nav {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        border-bottom: 1px solid rgba(103, 58, 183, 0.1);
+        border-radius: 0 0 12px 12px; /* 底部圆角 */
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+      }
+    }
+
+    .nav-item {
+      text-align: center;
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      padding: 8px 0;
+      min-height: 60px;
+    }
+    .nav-item:hover {
+      background-color: #f5f5f5;
+    }
+    .nav-item:active {
+      background-color: #e0e0e0;
+    }
+    .nav-item i {
+      font-size: 22px;
+      color: #999;
+      display: block;
+      margin-bottom: 2px;
+      pointer-events: none;
+    }
+    .nav-item span {
+      font-size: 12px;
+      color: #999;
+      pointer-events: none;
+    }
+    .nav-item.active span {
+      color: #673ab7;
+    }
+
+    /* 中间悬浮按钮 */
+    .floating-btn {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 56px;
+      height: 56px;
+      background: #673ab7;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      /* 增加触摸区域 */
+      min-height: 56px;
+      min-width: 56px;
+      /* 防止文本选中 */
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      /* 移除点击高亮 */
+      -webkit-tap-highlight-color: transparent;
+      /* 确保在移动设备上有足够的点击区域 */
+      padding: 8px;
+      /* 增加触摸响应 */
+      touch-action: manipulation;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .floating-btn:hover {
+      transform: translateX(-50%) scale(1.1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .floating-btn:active {
+      transform: translateX(-50%) scale(0.95);
+    }
+
+    /* 动态提示按钮 */
+    .custom-try-on-hint {
+      position: fixed;
+      bottom: 130px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: rgba(103, 58, 183, 0.9);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      z-index: 999;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+    }
+
+    .custom-try-on-hint.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-10px);
+    }
+
+    .custom-try-on-hint.hide {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-10px);
+    }
+
+    /* 保持显示状态的样式 */
+    .custom-try-on-hint.show {
+      opacity: 1 !important;
+      transform: translateX(-50%) translateY(-10px) !important;
+    }
+
+    /* 提示按钮动画 */
+    @keyframes hintPulse {
+      0% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.05); }
+      100% { transform: translateX(-50%) scale(1); }
+    }
+
+    .custom-try-on-hint.pulse {
+      animation: hintPulse 2s ease-in-out infinite;
+    }
+
+    /* 提示按钮入场动画 */
+    @keyframes hintSlideIn {
+      0% { 
+        opacity: 0; 
+        transform: translateX(-50%) translateY(-40px);
+      }
+      100% { 
+        opacity: 1; 
+        transform: translateX(-50%) translateY(-10px);
+      }
+    }
+
+    .custom-try-on-hint.slide-in {
+      animation: hintSlideIn 0.6s ease-out forwards;
+    }
+
+    /* 自定义试穿弹窗 */
+    .custom-try-on-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .custom-try-on-content {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 800px;
+      width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .custom-try-on-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      font-size: 24px;
+      color: #999;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .custom-try-on-close:hover {
+      background: rgba(255, 255, 255, 1);
+      color: #666;
+      transform: scale(1.1);
+    }
+
+    /* 用户选择区域 */
+    .user-selection {
+      margin-bottom: 20px;
+      padding: 16px;
+      background: rgba(103, 58, 183, 0.1);
+      border-radius: 12px;
+    }
+
+    .user-selection label {
+      font-weight: bold;
+      margin-right: 12px;
+    }
+
+    .user-selection select {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    /* 主要内容区域 */
+    .custom-try-on-main {
+      display: flex;
+      gap: 20px;
+    }
+
+    /* 衣物选择区域 */
+    .garment-selection {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .garment-section {
+      background: rgba(245, 245, 245, 0.8);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .garment-section h3 {
+      margin: 0 0 12px 0;
+      color: #333;
+      font-size: 16px;
+    }
+
+    .garment-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 120px;
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .garment-placeholder:hover {
+      border-color: #673ab7;
+      background: rgba(103, 58, 183, 0.05);
+    }
+
+    .garment-placeholder i {
+      font-size: 32px;
+      margin-bottom: 8px;
+      color: #999;
+    }
+
+    .garment-placeholder span {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .garment-selected {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .garment-selected img {
+      width: 100px;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .garment-selected span {
+      font-size: 12px;
+      color: #333;
+      text-align: center;
+    }
+
+    .garment-selected button {
+      padding: 4px 8px;
+      background: #ff4444;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* 试穿结果区域 */
+    .try-on-result {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .try-on-result h3 {
+      margin: 0 0 12px 0;
+      color: #333;
+      font-size: 16px;
+    }
+
+    .try-on-image-container {
+      flex: 1;
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(245, 245, 245, 0.8);
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    .try-on-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #999;
+    }
+
+    .try-on-placeholder i {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .try-on-placeholder span {
+      font-size: 14px;
+      text-align: center;
+    }
+
+    #generateTryOnBtn {
+      padding: 12px 24px;
+      background: #673ab7;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    #generateTryOnBtn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    #generateTryOnBtn:not(:disabled):hover {
+      background: #5e35b1;
+      transform: translateY(-2px);
+    }
+
+    /* 衣物选择弹窗 */
+    .garment-selector-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 3000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .garment-selector-content {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 900px;
+      width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .garment-selector-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      font-size: 24px;
+      color: #999;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .garment-selector-close:hover {
+      background: rgba(255, 255, 255, 1);
+      color: #666;
+      transform: scale(1.1);
+    }
+
+    .garment-selector-main {
+      display: flex;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    /* 分类导航 */
+    .category-nav {
+      width: 120px;
+      background: rgba(103, 58, 183, 0.1);
+      border-radius: 12px;
+      padding: 12px;
+      position: sticky;
+      top: 0;
+      height: fit-content;
+      max-height: 700px; /* 从400px增加到500px，增加25% */
+      overflow-y: auto;
+    }
+
+    .category-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 8px;
+      margin-bottom: 8px;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .category-item:hover {
+      background: rgba(103, 58, 183, 0.1);
+    }
+
+    .category-item.active {
+      background: #673ab7;
+      color: white;
+    }
+
+    .category-item .category-icon {
+      width: 24px;
+      height: 24px;
+      margin-bottom: 4px;
+      object-fit: contain;
+    }
+
+    .category-item span {
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* 上传区域样式 */
+    .upload-section {
+      margin-top: 20px;
+      padding: 12px;
+      border-top: 1px solid rgba(103, 58, 183, 0.2);
+    }
+
+    .upload-btn {
+      width: 100%;
+      padding: 12px;
+      background: rgba(103, 58, 183, 0.1);
+      border: 2px dashed rgba(103, 58, 183, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .upload-btn:hover {
+      background: rgba(103, 58, 183, 0.2);
+      border-color: rgba(103, 58, 183, 0.5);
+    }
+
+    .upload-btn i {
+      font-size: 20px;
+      color: #673ab7;
+    }
+
+    .upload-btn span {
+      font-size: 12px;
+      color: #673ab7;
+      font-weight: 500;
+    }
+
+    .upload-hint {
+      font-size: 10px;
+      color: #999;
+      text-align: center;
+      margin-top: 8px;
+      line-height: 1.3;
+    }
+
+    /* 衣物展示网格 */
+    .garment-display {
+      flex: 1;
+    }
+
+    .garment-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      max-height: 700px; /* 从400px增加到500px，保持与左侧导航一致 */
+      overflow-y: auto;
+    }
+
+    .garment-item {
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .garment-item:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .garment-item img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+    }
+
+    .garment-item.selected {
+      border: 3px solid #673ab7;
+    }
+
+    .no-category, .no-garments {
+      text-align: center;
+      color: #999;
+      padding: 20px;
+      font-size: 14px;
+    }
+
+    /* 新增用户项样式 */
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    /* 搭配图片容器样式 */
+    .coord-image-container {
+      margin-top: 20px;
+      text-align: center;
+      background: rgba(255,255,255,0.95);
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 280px;
+      width: 90%;
+      margin-left: auto;
+      margin-right: auto;
+      border: 1px solid rgba(103, 58, 183, 0.1);
+      position: relative;
+      z-index: 10;
+    }
+
+    .coord-image-container img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      display: block;
+      margin: 0 auto;
+      max-height: 400px;
+      object-fit: contain;
+    }
+
+    .coord-image-container .title {
+      font-size: 14px;
+      font-weight: bold;
+      color: #673ab7;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    /* 弹窗样式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 20px;
+      width: calc(100% - 40px);
+      max-width: 390px;
+      height: 70vh;
+      position: relative;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(103, 58, 183, 0.2);
+      transform: translateY(100%);
+      animation: slideUp 0.3s ease-out forwards;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(103, 58, 183, 0.3);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #673ab7;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-close {
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      font-size: 24px;
+      color: #999;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 9999;
+    }
+
+    .modal-close:hover {
+      background-color: rgba(103, 58, 183, 0.2);
+      color: #673ab7;
+      transform: scale(1.1);
+    }
+
+    .modal-body {
+      display: flex;
+      flex: 1 1 auto;
+      height: calc(100% - 60px);
+      width: 100%;
+      margin-top: 10px;
+      gap: 15px;
+    }
+
+    .modal-left {
+      flex: 1 1 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .modal-right {
+      flex: 1 1 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      position: relative;
+    }
+
+    .modal-image {
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      object-fit: contain;
+      background: rgba(245, 245, 245, 0.8);
+      border: 2px dashed rgba(103, 58, 183, 0.3);
+      backdrop-filter: blur(5px);
+    }
+
+    .try-on-button {
+      background: linear-gradient(135deg, #673ab7, #9c27b0);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .try-on-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(103, 58, 183, 0.4);
+    }
+
+    .try-on-button:active {
+      transform: translateY(0);
+    }
+
+    .placeholder-image {
+      width: 100%;
+      height: 100%;
+      background: rgba(245, 245, 245, 0.8);
+      border: 2px dashed rgba(103, 58, 183, 0.3);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      backdrop-filter: blur(5px);
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid rgba(103, 58, 183, 0.3);
+      border-radius: 50%;
+      border-top-color: #673ab7;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    .retry-button {
+      background: linear-gradient(135deg, #f44336, #d32f2f);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .retry-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+    }
+
+    .try-on-result {
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .try-on-result img {
+      border: 2px solid #673ab7;
+      box-shadow: 0 2px 8px rgba(103, 58, 183, 0.2);
+    }
+
+    /* 查看搭配按钮样式 */
+    .view-outfit-btn {
+      margin-top: 15px;
+      text-align: center;
+      animation: fadeInUp 0.5s ease-out;
+    }
+
+    .outfit-btn {
+      background: linear-gradient(135deg, #673ab7, #9c27b0);
+      color: white;
+      border: none;
+      border-radius: 25px;
+      padding: 16px 32px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.3);
+      transition: all 0.3s ease;
+      margin: 0 auto;
+      /* 增加触摸区域 */
+      min-height: 48px;
+      min-width: 120px;
+      /* 防止文本选中 */
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      /* 移除点击高亮 */
+      -webkit-tap-highlight-color: transparent;
+      /* 增加触摸响应 */
+      touch-action: manipulation;
+    }
+    
+    .view-outfit-btn {
+      transition: all 0.3s ease;
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .view-outfit-btn.fade-out {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+
+    .outfit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(103, 58, 183, 0.4);
+    }
+
+    .outfit-btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-icon {
+      font-size: 16px;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+
+
+    /* 响应式设计 */
+    @media (max-width: 400px) {
+      .modal-content {
+        max-width: 100%;
+        border-radius: 15px 15px 0 0;
+        padding: 15px;
+      }
+      
+      .modal-overlay {
+        padding-bottom: 70px;
+      }
+    }
+
+    /* 通知提示样式 */
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 2000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: all 0.3s ease;
+      max-width: 300px;
+      text-align: center;
+    }
+
+    .notification.success {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    .notification.error {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .notification.loading {
+      background-color: #2196f3;
+      color: white;
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .notification.hide {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-20px);
+    }
+
+    /* 评分功能样式 */
+    .rating-section {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 15px;
+      border: 1px solid rgba(103, 58, 183, 0.2);
+      text-align: center;
+    }
+
+    .rating-title {
+      font-size: 14px;
+      color: #673ab7;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .rating-stars {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .star {
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #ddd;
+      /* 增加触摸区域 */
+      min-width: 40px;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* 防止文本选中 */
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      /* 移除点击高亮 */
+      -webkit-tap-highlight-color: transparent;
+      /* 增加触摸响应 */
+      touch-action: manipulation;
+      /* 添加边框以便调试 */
+      border: 1px solid transparent;
+      border-radius: 4px;
+      /* 添加点击效果 */
+      position: relative;
+    }
+    
+    .star:hover {
+      transform: scale(1.1);
+      border-color: rgba(103, 58, 183, 0.3);
+    }
+    
+    .star:active {
+      transform: scale(0.95);
+    }
+
+    .star:hover {
+      transform: scale(1.1);
+    }
+
+    .star.active {
+      color: #ffd700;
+    }
+
+    .star.half {
+      color: #ffd700;
+    }
+
+    .rating-text {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .submit-rating-btn {
+      background: linear-gradient(135deg, #673ab7, #9c27b0);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(103, 58, 183, 0.3);
+    }
+
+    .submit-rating-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.4);
+    }
+
+    .submit-rating-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .rating-submitted {
+      color: #4caf50;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    /* 加载动画 */
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+    <div class="page-container">
+      <!-- 标题栏 -->
+      <div class="title-bar">
+      <div class="title">搭配魔镜</div>
+    </div>
+
+    <!-- 选择框区域 -->
+    <div class="select-section">
+      <div class="select-box dropdown" id="user-select">
+        <span id="user-select-text">用户选择</span>
+        <i>&#x25BC;</i>
+        <ul class="dropdown-menu" id="user-dropdown-menu">
+          <!-- 用户信息将动态添加 -->
+        </ul>
+      </div>
+      <div class="select-box dropdown" id="scene-select">
+        <span id="scene-select-text">场景选择</span>
+        <i>&#x25BC;</i>
+        <ul class="dropdown-menu">
+          <li>日常休闲</li>
+          <li>通勤办公</li>
+          <li>运动健身</li>
+          <li>派对聚会</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 输入与语音区域 -->
+    <div class="input-section">
+      <div class="input-box">
+        <input type="text" placeholder="说出需求，我会帮您自动搭配" />
+        <!-- 这里放麦克风按钮 -->
+        <div class="voice-btn" id="voice-btn">
+          <i>🎤</i>
+        </div>
+      </div>
+
+      <!-- 右上角放手+地球图标 -->
+      <div class="send-btn" id="send-btn">
+        <img src="https://cdn-icons-png.flaticon.com/512/724/724927.png" alt="send" />
+        <img src="{% static 'icons/retry.png' %}" alt="retry" style="display: none;" />
+      </div>
+      
+      <!-- 查看搭配按钮 -->
+      <div class="view-outfit-btn" id="view-outfit-btn" style="display: none;">
+        <button class="outfit-btn">
+          <span class="btn-text">查看搭配</span>
+          <div class="btn-icon">👔</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- 底部导航栏（复用） -->
+    <div class="bottom-nav">
+      <div class="nav-item">
+        <a href="{% url 'index' %}" style="text-decoration: none">
+          <i>🏠</i>
+          <span>Home</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'closet' %}" style="text-decoration: none">
+          <i>👕</i>
+          <span>closet</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'match' %}" style="text-decoration: none">
+          <i>⭐️</i>
+          <span>favourite</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'profile' %}" style="text-decoration: none">
+          <i>👤</i>
+          <span>profile</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 动态提示按钮 -->
+    <div id="customTryOnHint" class="custom-try-on-hint" style="display: none;">
+      <span>↓点击进行自定义试穿↓</span>
+    </div>
+
+    <!-- 中间悬浮按钮 -->
+    <div class="floating-btn active" onclick="showCustomTryOnModal()">
+      <i>🪞</i>
+    </div>
+
+    <!-- 自定义试穿弹窗 -->
+    <div id="customTryOnModal" class="custom-try-on-modal">
+      <div class="custom-try-on-content">
+        <button class="custom-try-on-close" onclick="closeCustomTryOnModal()">×</button>
+        
+        <!-- 顶部用户选择 -->
+        <div class="user-selection">
+          <label for="userSelect">选择用户:</label>
+          <select id="userSelect">
+            <option value="">默认用户</option>
+          </select>
+        </div>
+        
+        <!-- 主要内容区域 -->
+        <div class="custom-try-on-main">
+          <!-- 左侧衣物选择 -->
+          <div class="garment-selection">
+            <!-- 上衣选择 -->
+            <div class="garment-section">
+              <h3>选择上衣</h3>
+                          <div id="upperPlaceholder" class="garment-placeholder" onclick="showGarmentSelector('upper').catch(console.error)">
+              <i>👕</i>
+              <span>点击选择上衣</span>
+            </div>
+              <div id="upperSelected" class="garment-selected" style="display: none;">
+                <img id="upperImage" src="" alt="已选上衣">
+                <span id="upperName"></span>
+                <button onclick="clearSelection('upper')">清除</button>
+              </div>
+            </div>
+            
+            <!-- 下装选择 -->
+            <div class="garment-section">
+              <h3>选择下装</h3>
+                          <div id="lowerPlaceholder" class="garment-placeholder" onclick="showGarmentSelector('lower').catch(console.error)">
+              <i>👖</i>
+              <span>点击选择下装</span>
+            </div>
+              <div id="lowerSelected" class="garment-selected" style="display: none;">
+                <img id="lowerImage" src="" alt="已选下装">
+                <span id="lowerName"></span>
+                <button onclick="clearSelection('lower')">清除</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 右侧试穿结果 -->
+          <div class="try-on-result">
+            <h3>试穿效果</h3>
+            <div id="tryOnImageContainer" class="try-on-image-container">
+              <div class="try-on-placeholder">
+                <i>🪞</i>
+                <span>↓点击下方生成↓</span>
+              </div>
+            </div>
+            <button id="generateTryOnBtn" onclick="generateCustomTryOn()" disabled>生成试穿效果</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 衣物选择弹窗 -->
+    <div id="garmentSelectorModal" class="garment-selector-modal">
+      <div class="garment-selector-content">
+        <button class="garment-selector-close" onclick="closeGarmentSelector()">×</button>
+        <h3 id="garmentSelectorTitle">选择衣物</h3>
+        
+        <div class="garment-selector-main">
+          <!-- 左侧分类导航 -->
+          <div class="category-nav">
+            <div id="categoryList"></div>
+            <!-- 自行上传按钮 -->
+            <div class="upload-section">
+              <input type="file" id="garmentUpload" accept="image/*" style="display: none;" onchange="handleGarmentUpload(event)">
+              <button class="upload-btn" onclick="document.getElementById('garmentUpload').click()">
+                <i>📁</i>
+                <span>自行上传</span>
+              </button>
+              <p class="upload-hint">不在衣柜里？在这里上传</p>
+            </div>
+          </div>
+          
+          <!-- 右侧衣物展示 -->
+          <div class="garment-display">
+            <div id="garmentGrid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+
+  <script>
+        // 火山引擎配置（仅保留RTC相关配置，ASR改为后端处理）
+        const VOLC_CONFIG = {
+        appId: '2604474986', // 从火山引擎控制台获取
+        token: 'Z981ceaOj5reMSBsG-Jwguu5I4TPzdUk',
+        userId: `user_${Date.now()}` // 生成唯一用户ID
+    };
+
+    // 全局变量
+    let rtcClient = null;
+    let isRecording = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let Stream = null;
+    let finalTranscript = '';
+    let interimTranscript = '';
+    let selectedUser = null; // 当前选中的用户
+
+    // 按钮状态管理函数
+    function updateVoiceButtonState(recording) {
+        if (recording) {
+            voiceBtn.innerHTML = '<i>⏹️</i>';
+            voiceBtn.style.backgroundColor = '#ff4444';
+            console.log('按钮状态设置为录制中');
+        } else {
+            voiceBtn.innerHTML = '<i>🎤</i>';
+            voiceBtn.style.backgroundColor = '#ccc';
+            console.log('按钮状态设置为待机');
+        }
+    }
+
+    // DOM元素
+    const voiceBtn = document.getElementById("voice-btn");
+    const inputBox = document.querySelector(".input-box input");
+
+    // 初始化火山引擎RTC客户端
+    function initVolcEngines() {
+        // 初始化RTC客户端
+        rtcClient = VolcEngineRTC.createClient({
+            mode: 'rtc',
+            codec: 'opus' // 音频优先选择opus编码
+        });
+
+        // RTC连接状态监听
+        rtcClient.on('connection-state-change', (state) => {
+            console.log('RTC连接状态:', state);
+            if (state === 'disconnected' && isRecording) {
+                alert('连接已断开，语音录制已停止');
+                stopRecording();
+            }
+        });
+    }
+
+         // 开始录制音频并发送到后端
+     async function startRecording() {
+         if (isRecording) return;
+ 
+         try {
+                          console.log('开始录制音频...');
+             
+             // 检查浏览器支持
+             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                 console.error('getUserMedia API 不可用');
+                 console.log('navigator.mediaDevices:', navigator.mediaDevices);
+                 throw new Error('浏览器不支持语音录制功能，请使用现代浏览器（Chrome、Firefox、Safari、Edge等）');
+             }
+             
+             // 更新按钮状态
+             console.log('更新按钮状态为录制中...');
+             updateVoiceButtonState(true);
+             isRecording = true;
+             console.log('按钮状态已更新，isRecording:', isRecording);
+             finalTranscript = inputBox.value;
+             interimTranscript = '';
+             audioChunks = [];
+             
+             console.log('尝试获取麦克风权限...');
+             
+             // 获取麦克风权限并创建音频流（使用更兼容的配置）
+             const constraints = {
+                 audio: {
+                     echoCancellation: true,
+                     noiseSuppression: true,
+                     autoGainControl: true
+                 },
+                 video: false
+             };
+             
+             // 尝试获取音频流
+             stream = await navigator.mediaDevices.getUserMedia(constraints);
+             
+             console.log('麦克风权限获取成功:', stream);
+
+            // 创建MediaRecorder录制音频
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            // 录制停止后发送音频到后端
+            mediaRecorder.onstop = async () => {
+                await sendAudioToBackend();
+            };
+
+            // 开始录制
+            mediaRecorder.start();
+            console.log('音频录制已启动');
+        } catch (error) {
+            console.error('启动录制失败:', error);
+            alert(`启动失败: ${error.message || '请检查麦克风权限'}`);
+            stopRecording();
+        }
+    }
+
+    // 停止录制并发送音频到后端
+    async function stopRecording() {
+        if (!isRecording) return;
+
+        console.log('开始停止录制...');
+        
+        // 立即恢复按钮状态
+        console.log('更新按钮状态为停止录制...');
+        updateVoiceButtonState(false);
+        isRecording = false;
+        console.log('按钮状态已恢复，isRecording:', isRecording);
+
+        // 停止录制并清理资源
+        try {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                console.log('停止MediaRecorder...');
+                mediaRecorder.stop();
+            }
+            
+            if (stream) {
+                console.log('停止音频流...');
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            
+            console.log('录制停止完成');
+        } catch (error) {
+            console.error('停止录制出错:', error);
+        }
+    }
+
+    // 主要修改发送音频的部分，其他逻辑保持不变
+    async function sendAudioToBackend() {
+        if (!audioChunks.length) {
+            console.error('没有音频数据可发送');
+            return;
+        }
+        
+        try {
+            // 合并所有音频片段为WAV格式
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            
+            // 创建FormData对象
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.wav');
+            
+            // 显示加载状态
+            inputBox.value = '语音识别中...';
+            
+            // 发送音频到后端新接口
+            const response = await fetch('/api/asr/', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`服务器错误: ${response.status}`);
+            }
+            
+            // 解析JSON响应
+            const result = await response.json();
+            
+            // 更新识别结果
+            if (result.text) {
+                finalTranscript += result.text;
+                inputBox.value = finalTranscript;
+                console.log('识别结果:', result.text);
+            } else {
+                console.error('没有识别结果:', result);
+                alert('语音识别失败，未返回结果');
+            }
+        } catch (error) {
+            console.error('发送音频失败:', error);
+            alert(`语音识别失败: ${error.message}`);
+            inputBox.value = finalTranscript; // 恢复之前的内容
+        }
+    }
+
+         // 全局测试函数，可在控制台调用
+     window.testMicrophone = async function() {
+         console.log('=== 手动测试麦克风 ===');
+         try {
+             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+             console.log('✅ 麦克风测试成功:', stream);
+             stream.getTracks().forEach(track => track.stop());
+             return true;
+         } catch (error) {
+             console.error('❌ 麦克风测试失败:', error);
+             return false;
+         }
+     };
+
+     // 调试函数：检查按钮状态
+     window.checkVoiceButtonState = function() {
+         console.log('=== 检查麦克风按钮状态 ===');
+         console.log('isRecording:', isRecording);
+         console.log('voiceBtn.innerHTML:', voiceBtn.innerHTML);
+         console.log('voiceBtn.style.backgroundColor:', voiceBtn.style.backgroundColor);
+         console.log('voiceBtn元素:', voiceBtn);
+     };
+
+     // 测试按钮状态更新
+     window.testButtonStateUpdate = function() {
+         console.log('=== 测试按钮状态更新 ===');
+         console.log('当前状态:', isRecording);
+         if (isRecording) {
+             updateVoiceButtonState(false);
+             isRecording = false;
+             console.log('已切换到待机状态');
+         } else {
+             updateVoiceButtonState(true);
+             isRecording = true;
+             console.log('已切换到录制状态');
+         }
+     };
+     
+     // 测试浏览器支持
+     function testBrowserSupport() {
+         console.log('=== 浏览器兼容性测试 ===');
+         console.log('User Agent:', navigator.userAgent);
+         console.log('navigator.mediaDevices:', navigator.mediaDevices);
+         console.log('navigator.getUserMedia:', navigator.getUserMedia);
+         console.log('navigator.webkitGetUserMedia:', navigator.webkitGetUserMedia);
+         console.log('navigator.mozGetUserMedia:', navigator.mozGetUserMedia);
+         console.log('navigator.msGetUserMedia:', navigator.msGetUserMedia);
+         
+         // 检查各种可能的getUserMedia实现
+         const hasModernAPI = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+         const hasLegacyAPI = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
+         
+         console.log('现代API支持:', hasModernAPI);
+         console.log('旧版API支持:', hasLegacyAPI);
+         
+         if (hasModernAPI) {
+             console.log('✅ 浏览器支持现代 getUserMedia API');
+             return 'modern';
+         } else if (hasLegacyAPI) {
+             console.log('⚠️ 浏览器支持旧版 getUserMedia API');
+             return 'legacy';
+         } else {
+             console.log('❌ 浏览器不支持 getUserMedia API');
+             return 'none';
+         }
+     }
+     
+         // 页面加载时初始化
+    window.addEventListener('load', () => {
+      console.log('页面加载完成，开始初始化...');
+      
+
+      
+      // 测试浏览器支持
+      testBrowserSupport();
+         
+         // 检查是否在HTTPS环境下
+         if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+             console.warn('⚠️ 当前不在HTTPS环境下，某些浏览器可能限制getUserMedia功能');
+             console.log('当前协议:', location.protocol);
+             console.log('当前主机:', location.hostname);
+             
+             // 显示用户友好的提示
+             const httpsWarning = document.createElement('div');
+             httpsWarning.style.cssText = `
+                 position: fixed;
+                 top: 10px;
+                 left: 50%;
+                 transform: translateX(-50%);
+                 background: #ff9800;
+                 color: white;
+                 padding: 10px 20px;
+                 border-radius: 5px;
+                 font-size: 12px;
+                 z-index: 1000;
+                 max-width: 300px;
+                 text-align: center;
+             `;
+             httpsWarning.innerHTML = `
+                 <strong>提示：</strong>语音功能需要HTTPS环境。<br>
+                 建议使用 <a href="https://127.0.0.1:8000" style="color: white; text-decoration: underline;">https://127.0.0.1:8000</a> 访问<br>
+                 或者使用 <a href="http://localhost:8000" style="color: white; text-decoration: underline;">http://localhost:8000</a> 访问
+             `;
+             document.body.appendChild(httpsWarning);
+             
+             // 5秒后自动隐藏提示
+             setTimeout(() => {
+                 if (httpsWarning.parentNode) {
+                     httpsWarning.parentNode.removeChild(httpsWarning);
+                 }
+             }, 5000);
+         }
+         
+         // 检查浏览器基本支持
+         const supportLevel = testBrowserSupport();
+         
+         if (supportLevel === 'none') {
+             console.error('浏览器完全不支持 getUserMedia');
+             alert('您的浏览器不支持语音录制功能，请使用现代浏览器（Chrome、Firefox、Safari、Edge等）');
+             return;
+         } else if (supportLevel === 'legacy') {
+             console.warn('浏览器支持旧版 getUserMedia API，启用兼容模式...');
+             // 为旧版浏览器创建兼容层
+             if (!navigator.mediaDevices) {
+                 navigator.mediaDevices = {};
+             }
+             
+             navigator.mediaDevices.getUserMedia = function(constraints) {
+                 const getUserMedia = navigator.getUserMedia || 
+                                   navigator.webkitGetUserMedia || 
+                                   navigator.mozGetUserMedia || 
+                                   navigator.msGetUserMedia;
+                                   
+                 if (!getUserMedia) {
+                     return Promise.reject(new Error('getUserMedia is not implemented in this browser'));
+                 }
+                 
+                 return new Promise(function(resolve, reject) {
+                     getUserMedia.call(navigator, constraints, resolve, reject);
+                 });
+             };
+             console.log('✅ 兼容模式已启用');
+         } else {
+             console.log('✅ 使用现代 getUserMedia API');
+         }
+         
+         // 加载火山引擎Web RTC SDK
+         const rtcScript = document.createElement('script');
+         rtcScript.src = 'https://lf-unpkg.volccdn.com/obj/vcloudfe/sdk/@volcengine/rtc/4.66.19/1750832750322/index.min.js';
+         rtcScript.onload = () => {
+             console.log('火山引擎RTC SDK加载成功');
+             initVolcEngines();
+         };
+         rtcScript.onerror = () => {
+             console.error('RTC SDK加载失败，CDN地址无效');
+             alert('RTC SDK加载失败，请检查网络或更新CDN地址');
+         };
+         document.head.appendChild(rtcScript);
+         
+         // 添加按钮点击事件监听
+         if (voiceBtn) {
+             // 确保按钮初始状态正确
+             updateVoiceButtonState(false);
+             
+             voiceBtn.addEventListener('click', () => {
+                 console.log('麦克风按钮被点击，当前isRecording状态:', isRecording);
+                 if (isRecording) {
+                     console.log('调用stopRecording()');
+                     stopRecording();
+                 } else {
+                     console.log('调用startRecording()');
+                     startRecording();
+                 }
+             });
+             console.log('语音按钮事件监听器已添加');
+         } else {
+             console.error('未找到voice-btn元素');
+         }
+     });
+    
+    // 页面加载完成后执行
+    document.addEventListener('DOMContentLoaded', function() {
+        // 自动获取并设置默认用户
+        autoSetDefaultUser();
+    });
+
+    // 自动设置默认用户
+    async function autoSetDefaultUser() {
+        try {
+            const response = await fetch("{% url 'load_users' %}");
+            const data = await response.json();
+            
+            // 查找默认用户
+            const defaultUser = data.users.find(user => user.is_default);
+            
+            if (defaultUser) {
+                // 设置默认用户
+                selectedUser = defaultUser;
+                const userSelectText = document.getElementById('user-select-text');
+                userSelectText.textContent = defaultUser.name;
+                console.log('自动设置默认用户:', selectedUser);
+            } else {
+                console.log('未设置默认用户');
+            }
+        } catch (error) {
+            console.error('获取默认用户失败:', error);
+        }
+    }
+
+    // 为用户选择下拉菜单绑定事件
+    const userSelectBox = document.getElementById('user-select');
+    userSelectBox.addEventListener('click', async function (e) {
+      // 互斥展开：点击用户选择时关闭场景选择
+      const sceneSelectBox = document.getElementById('scene-select');
+      if (sceneSelectBox.classList.contains('open')) {
+        sceneSelectBox.classList.remove('open');
+      }
+
+      const dropdownMenu = document.getElementById('user-dropdown-menu');
+      const selectText = document.getElementById('user-select-text');
+
+      // 切换下拉菜单显示状态
+      this.classList.toggle('open');
+
+      // 若菜单打开，请求用户数据
+      if (this.classList.contains('open')) {
+        try {
+          const response = await fetch("{% url 'load_users' %}");
+          const data = await response.json();
+
+          dropdownMenu.innerHTML = ''; // 清空原有内容
+
+          if (data.users.length > 0) {
+            data.users.forEach(user => {
+              const li = document.createElement('li');
+              const userItem = document.createElement('div');
+              userItem.className = 'user-item';
+
+              const avatar = document.createElement('img');
+              avatar.className = 'user-avatar';
+              avatar.src = user.photo_url || 'https://via.placeholder.com/30'; // 若没有图片，显示占位图
+              avatar.alt = user.name;
+
+              const name = document.createElement('span');
+              name.textContent = user.name;
+
+              userItem.appendChild(avatar);
+              userItem.appendChild(name);
+              li.appendChild(userItem);
+
+              li.addEventListener('click', (event) => {
+                event.stopPropagation(); // 防止冒泡导致菜单重新切换
+                selectText.textContent = user.name;
+                selectedUser = user; // 保存选中的用户信息
+                console.log('选中用户:', selectedUser);
+                userSelectBox.classList.remove('open'); // 自动关闭菜单
+              });
+              dropdownMenu.appendChild(li);
+            });
+          } else {
+            const li = document.createElement('li');
+            li.textContent = '暂无用户录入，请进入"我的"进行录入。';
+            li.style.color = 'red';
+            li.style.cursor = 'default';
+            li.addEventListener('click', (e) => e.stopPropagation());
+            dropdownMenu.appendChild(li);
+          }
+        } catch (error) {
+          console.error('获取用户信息失败:', error);
+          const li = document.createElement('li');
+          li.textContent = '获取用户信息失败，请稍后重试。';
+          li.style.color = 'red';
+          li.style.cursor = 'default';
+          li.addEventListener('click', (e) => e.stopPropagation());
+          dropdownMenu.appendChild(li);
+        }
+      }
+    });
+
+    // 为场景选择下拉菜单绑定事件
+    const sceneSelectBox = document.getElementById('scene-select');
+    sceneSelectBox.addEventListener('click', function (e) {
+      // 互斥展开：点击场景选择时关闭用户选择
+      const userSelectBox = document.getElementById('user-select');
+      if (userSelectBox.classList.contains('open')) {
+        userSelectBox.classList.remove('open');
+      }
+      // 切换当前菜单显示
+      this.classList.toggle('open');
+    });
+
+    // 给场景选择菜单项绑定点击事件，选中后替换文字，并关闭菜单
+    sceneSelectBox.querySelectorAll('.dropdown-menu li').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation(); // 阻止事件冒泡导致关闭菜单冲突
+        const textSpan = sceneSelectBox.querySelector('span');
+        textSpan.textContent = item.textContent;
+        sceneSelectBox.classList.remove('open'); // 自动关闭菜单
+      });
+    });
+
+    // 点击页面空白处关闭所有菜单
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".select-box.dropdown")) {
+        document.querySelectorAll(".select-box.dropdown.open").forEach((openBox) => {
+          openBox.classList.remove("open");
+        });
+      }
+    });
+
+    function getCookie(name) {
+       const value = `; ${document.cookie}`;
+       const parts = value.split(`; ${name}=`);
+       if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+    const sendBtn = document.getElementById('send-btn');
+    const sendImg = sendBtn.querySelector('img[alt="send"]');
+    const retryImg = sendBtn.querySelector('img[alt="retry"]');
+    
+    // 更新sendBtn状态为重试模式
+    function updateSendBtnToRetry() {
+      if (sendImg && retryImg) {
+        sendImg.style.display = 'none';
+        retryImg.style.display = 'block';
+        sendBtn.classList.add('retry-mode');
+        // 确保按钮可见
+        sendBtn.style.display = 'flex';
+        console.log('sendBtn已更新为重试模式');
+      } else {
+        console.error('sendBtn图片元素未找到');
+      }
+    }
+    
+    // 重置sendBtn状态为发送模式
+    function resetSendBtnToSend() {
+      if (sendImg && retryImg) {
+        sendImg.style.display = 'block';
+        retryImg.style.display = 'none';
+        sendBtn.classList.remove('retry-mode');
+        console.log('sendBtn已重置为发送模式');
+      } else {
+        console.error('sendBtn图片元素未找到');
+      }
+    }
+    
+    // 隐藏sendBtn（点击retry后不再显示）
+    function hideSendBtn() {
+      sendBtn.style.display = 'none';
+      console.log('sendBtn已隐藏');
+    }
+    
+    // 确保sendBtn可见
+    function ensureSendBtnVisible() {
+      sendBtn.style.display = 'flex';
+      console.log('sendBtn已确保可见');
+    }
+    
+    // 隐藏"查看搭配"按钮（带过渡动画）
+    function hideViewOutfitBtn() {
+      const viewOutfitBtn = document.getElementById('view-outfit-btn');
+      if (viewOutfitBtn) {
+        viewOutfitBtn.classList.add('fade-out');
+        setTimeout(() => {
+          viewOutfitBtn.style.display = 'none';
+          viewOutfitBtn.classList.remove('fade-out');
+        }, 300);
+        console.log('"查看搭配"按钮已隐藏');
+      }
+    }
+    
+    // 添加retry按钮旋转动画
+    function addRetryButtonAnimation() {
+      if (sendBtn.classList.contains('retry-mode')) {
+        // 添加旋转动画类
+        sendBtn.classList.add('rotating');
+        
+        // 0.8秒后移除旋转类（与CSS动画时长一致）
+        setTimeout(() => {
+          sendBtn.classList.remove('rotating');
+        }, 800);
+        
+        console.log('retry按钮旋转动画已触发');
+      }
+    }
+    
+    sendBtn.addEventListener('click', async () => {
+      // 如果是retry模式，只触发旋转动画，不隐藏按钮
+      if (sendBtn.classList.contains('retry-mode')) {
+        addRetryButtonAnimation();
+        hideViewOutfitBtn();
+        
+        // 重置评分状态
+        window.savedRating = undefined;
+        window.savedRatingSubmitted = undefined;
+        window.ratingInitialized = undefined;
+        currentRating = 0;
+        ratingSubmitted = false;
+        console.log('retry按钮点击，评分状态已重置');
+      }
+      
+      try {
+        // 从 localStorage 获取城市信息
+        const city = decodeURIComponent(getCookie('city') || '');
+        const now = new Date();
+        const start_time = now.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '.');
+        const end_time = start_time;  // 示例中假设结束时间和开始时间相同
+        console.log('时间信息:', { start_time, end_time });
+        
+        // 检查是否选择了用户
+        if (!selectedUser) {
+          showNotification('请先选择一个用户', 'error');
+          return;
+        }
+        
+        console.log('选择的用户:', selectedUser);
+        
+        const gender = selectedUser.gender || '';
+        const height = selectedUser.height || '';
+        const weight = selectedUser.weight || '';
+        
+        console.log('用户信息:', { gender, height, weight });
+        
+        // 获取场景选择信息
+        const scene = document.getElementById('scene-select-text').textContent;
+        console.log('场景信息:', scene);
+        
+        // 检查是否选择了场景
+        if (scene === '场景选择') {
+          showNotification('请先选择一个场景', 'error');
+          return;
+        }
+        
+        // 获取输入框内容
+        const userInput = inputBox.value.trim();
+
+        // 拼接场景和输入
+        const fullSceneInput = `${scene},  ${userInput}`;
+        
+        // wendang 字段将由后端自动获取 closet.json 的内容
+        const wendang = ''; // 前端不传递，由后端获取
+
+        const formData = new FormData();
+        formData.append('city', city);
+        formData.append('end_time', end_time);
+        formData.append('gender', gender);
+        formData.append('height', height);
+        formData.append('start_time', start_time);
+        formData.append('weight', weight);
+        formData.append('wendang', wendang);
+        formData.append('scene', fullSceneInput);
+
+        console.log('=== 发送到后端的参数 ===');
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}: ${value}`);
+        }
+
+        console.log('=== 开始调用后端接口 ===');
+        
+        // 隐藏之前的"查看搭配"按钮（带过渡动画）
+        hideViewOutfitBtn();
+        
+        // 如果当前是retry模式，保持retry状态；否则重置为发送模式
+        if (!sendBtn.classList.contains('retry-mode')) {
+          resetSendBtnToSend();
+        }
+        
+        // 显示加载提示
+        const loadingText = document.createElement('div');
+        loadingText.textContent = '正在生成搭配推荐...';
+        loadingText.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: rgba(0,0,0,0.8);
+          color: white;
+          padding: 15px 25px;
+          border-radius: 10px;
+          z-index: 1000;
+          font-size: 14px;
+        `;
+        document.body.appendChild(loadingText);
+        
+        const responseWorkflow = await fetch("{% url 'coze_workflow' %}", {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        });
+        
+        // 移除加载提示
+        loadingText.remove();
+
+        console.log('=== 后端响应状态 ===');
+        console.log('状态码:', responseWorkflow.status);
+        console.log('状态文本:', responseWorkflow.statusText);
+
+        const result = await responseWorkflow.json();
+        console.log('=== 后端返回结果 ===');
+        console.log('完整结果:', result);
+        
+        if (responseWorkflow.ok) {
+          console.log('搭配推荐结果:', result.results);
+          
+                      if (result.success) {
+              // 显示成功消息
+              showNotification('搭配推荐生成成功！', 'success');
+              
+              // 如果有拼接图片，显示"查看搭配"按钮
+              if (result.coord_url) {
+                console.log('拼接图片URL:', result.coord_url);
+                console.log('拼接图片文件名:', result.coord_image);
+                
+                // 保存搭配数据到全局变量
+                window.currentOutfitData = {
+                  coord_url: result.coord_url,
+                  coord_image: result.coord_image,
+                  results: result.results
+                };
+                
+                              // 显示"查看搭配"按钮
+              const viewOutfitBtn = document.getElementById('view-outfit-btn');
+              viewOutfitBtn.style.display = 'block';
+              // 确保按钮可见
+              viewOutfitBtn.style.opacity = '1';
+              viewOutfitBtn.style.transform = 'translateY(0)';
+              
+              // 更新sendBtn状态为重试模式
+              updateSendBtnToRetry();
+              // 确保retry按钮可见
+              ensureSendBtnVisible();
+              }
+            } else {
+            // 显示错误消息
+            showNotification('搭配推荐失败: ' + (result.error || '未知错误'), 'error');
+          }
+        } else {
+          console.error('调用错误:', result.error);
+          showNotification('搭配推荐失败: ' + (result.error || '未知错误'), 'error');
+        }
+      } catch (error) {
+        console.error('请求出错:', error);
+        showNotification('请求失败: ' + error.message, 'error');
+      }
+    });
+
+    // 查看搭配按钮点击事件
+    document.addEventListener('DOMContentLoaded', function() {
+      // 使用事件委托，因为按钮是动态创建的
+      document.addEventListener('click', function(e) {
+        if (e.target.closest('.outfit-btn')) {
+          showOutfitModal();
+        }
+      });
+    });
+
+    // 显示搭配弹窗函数
+    function showOutfitModal() {
+      if (!window.currentOutfitData) {
+        showNotification('没有可用的搭配数据', 'error');
+        return;
+      }
+      
+      // 检查是否已经有保存的评分状态
+      if (window.savedRating && window.savedRatingSubmitted) {
+        // 恢复保存的评分状态
+        currentRating = window.savedRating;
+        ratingSubmitted = window.savedRatingSubmitted;
+        console.log('恢复保存的评分状态:', currentRating, ratingSubmitted);
+      } else {
+        // 只在第一次打开弹窗时重置评分状态
+        if (typeof window.ratingInitialized === 'undefined') {
+          currentRating = 0;
+          ratingSubmitted = false;
+          window.ratingInitialized = true;
+        }
+      }
+      
+      // 延迟执行UI状态恢复，确保DOM元素已创建
+      setTimeout(() => {
+        if (ratingSubmitted && currentRating > 0) {
+          // 恢复UI状态
+          const stars = document.querySelectorAll('.star');
+          const ratingText = document.querySelector('.rating-text');
+          const submitBtn = document.querySelector('.submit-rating-btn');
+          
+          // 恢复星星状态
+          stars.forEach((star, index) => {
+            const starRating = parseInt(star.dataset.rating);
+            if (starRating <= currentRating) {
+              star.classList.add('active');
+            } else {
+              star.classList.remove('active');
+            }
+          });
+          
+          // 恢复文本和按钮状态
+          if (ratingText) {
+            const ratingDescriptions = {
+              1: '非常不满意',
+              2: '不满意',
+              3: '一般',
+              4: '满意',
+              5: '非常满意'
+            };
+            ratingText.innerHTML = '<span class="rating-submitted">✓ 评分已提交</span>';
+          }
+          
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '已提交';
+          }
+          
+          console.log('UI状态已恢复');
+        }
+      }, 100);
+
+      // 移除之前的弹窗（如果存在）
+      const existingModal = document.querySelector('.modal-overlay');
+      if (existingModal) {
+        existingModal.remove();
+      }
+      
+      // 创建弹窗遮罩
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'modal-overlay';
+      
+      // 创建弹窗内容
+      const modalContent = document.createElement('div');
+      modalContent.className = 'modal-content';
+      
+      // 创建弹窗头部
+      const modalHeader = document.createElement('div');
+      modalHeader.className = 'modal-header';
+      
+      // 创建标题
+      const modalTitle = document.createElement('div');
+      modalTitle.className = 'modal-title';
+      modalTitle.textContent = '搭配推荐';
+      
+      // 创建关闭按钮
+      const closeButton = document.createElement('button');
+      closeButton.className = 'modal-close';
+      closeButton.innerHTML = '×';
+      closeButton.onclick = function() {
+        closeModal(modalOverlay);
+      };
+      
+      // 主体区域（水平分栏）
+      const modalBody = document.createElement('div');
+      modalBody.className = 'modal-body';
+
+      // 左侧区域（搭配图片）
+      const modalLeft = document.createElement('div');
+      modalLeft.className = 'modal-left';
+      const modalImage = document.createElement('img');
+      modalImage.className = 'modal-image';
+      modalImage.src = window.currentOutfitData.coord_url;
+      modalImage.alt = '搭配推荐';
+      modalLeft.appendChild(modalImage);
+
+      // 右侧区域（试穿按钮）
+      const modalRight = document.createElement('div');
+      modalRight.className = 'modal-right';
+      const tryOnButton = document.createElement('button');
+      tryOnButton.className = 'try-on-button';
+      tryOnButton.innerHTML = '<span>查看试穿效果</span><div>👤</div>';
+      tryOnButton.onclick = function() {
+        console.log('试穿按钮被点击');
+        showTryOnPlaceholder();
+      };
+      modalRight.appendChild(tryOnButton);
+
+      // 创建评分区域
+      const ratingSection = document.createElement('div');
+      ratingSection.className = 'rating-section';
+      
+      const ratingTitle = document.createElement('div');
+      ratingTitle.className = 'rating-title';
+      ratingTitle.textContent = '请为本次搭配推荐评分';
+      
+      const ratingStars = document.createElement('div');
+      ratingStars.className = 'rating-stars';
+      
+      // 创建5颗星
+      for (let i = 1; i <= 5; i++) {
+        const star = document.createElement('span');
+        star.className = 'star';
+        star.innerHTML = '★';
+        star.dataset.rating = i;
+        star.style.cursor = 'pointer';
+        star.style.userSelect = 'none';
+        star.style.webkitUserSelect = 'none';
+        
+        // 添加多种事件监听器确保兼容性
+        star.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('星星被点击，评分:', i);
+          setRating(i);
+        });
+        
+        // 添加触摸事件支持
+        star.addEventListener('touchstart', function(e) {
+          e.preventDefault();
+          console.log('星星被触摸，评分:', i);
+          setRating(i);
+        });
+        
+        ratingStars.appendChild(star);
+      }
+      
+      const ratingText = document.createElement('div');
+      ratingText.className = 'rating-text';
+      ratingText.textContent = '点击星星进行评分';
+      
+      const submitRatingBtn = document.createElement('button');
+      submitRatingBtn.className = 'submit-rating-btn';
+      submitRatingBtn.textContent = '提交评分';
+      submitRatingBtn.disabled = true;
+      submitRatingBtn.onclick = function() {
+        submitRating();
+      };
+      
+      ratingSection.appendChild(ratingTitle);
+      ratingSection.appendChild(ratingStars);
+      ratingSection.appendChild(ratingText);
+      ratingSection.appendChild(submitRatingBtn);
+      
+      // 组装弹窗
+      modalHeader.appendChild(modalTitle);
+      modalHeader.appendChild(closeButton);
+      modalContent.appendChild(modalHeader);
+      modalBody.appendChild(modalLeft);
+      modalBody.appendChild(modalRight);
+      modalContent.appendChild(modalBody);
+      modalContent.appendChild(ratingSection);
+      modalOverlay.appendChild(modalContent);
+      
+      // 添加到页面
+      document.body.appendChild(modalOverlay);
+      
+      // 点击遮罩关闭弹窗
+      modalOverlay.addEventListener('click', function(e) {
+        if (e.target === modalOverlay) {
+          closeModal(modalOverlay);
+        }
+      });
+    }
+
+    // 自定义试穿相关函数
+    let selectedUpperGarment = null;
+    let selectedLowerGarment = null;
+    let currentGarmentType = null;
+    let closetData = null;
+    let usersData = null;
+
+    // 显示动态提示
+    function showCustomTryOnHint() {
+      const hint = document.getElementById('customTryOnHint');
+      if (hint) {
+        console.log('显示动态提示');
+        hint.style.display = 'block';
+        
+        // 添加入场动画
+        hint.classList.add('slide-in');
+        
+        // 等待入场动画完成后保持显示状态
+        setTimeout(() => {
+          hint.classList.remove('slide-in');
+          hint.classList.add('show');
+        }, 600);
+      } else {
+        console.error('未找到动态提示元素');
+      }
+    }
+
+    // 显示自定义试穿弹窗
+    function showCustomTryOnModal() {
+      const modal = document.getElementById('customTryOnModal');
+      modal.style.display = 'flex';
+      loadUsersForTryOn();
+      loadClosetData();
+    }
+
+    // 关闭自定义试穿弹窗
+    function closeCustomTryOnModal() {
+      const modal = document.getElementById('customTryOnModal');
+      modal.style.display = 'none';
+      // 重置选择
+      selectedUpperGarment = null;
+      selectedLowerGarment = null;
+      updateGenerateButton();
+    }
+
+    // 加载用户数据
+    async function loadUsersForTryOn() {
+      try {
+        const response = await fetch("{% url 'get_users_for_try_on' %}");
+        const data = await response.json();
+        
+        if (data.success) {
+          usersData = data;
+          const userSelect = document.getElementById('userSelect');
+          userSelect.innerHTML = '<option value="">默认用户</option>';
+          
+          data.users.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = user.name;
+            userSelect.appendChild(option);
+          });
+          
+          // 设置默认用户
+          if (data.default_user) {
+            userSelect.value = data.default_user.id;
+          }
+        }
+      } catch (error) {
+        console.error('加载用户数据失败:', error);
+      }
+    }
+
+    // 加载衣柜数据
+    async function loadClosetData() {
+      try {
+        const response = await fetch("{% url 'get_closet_data' %}");
+        const data = await response.json();
+        
+        if (data.success) {
+          closetData = data;
+          console.log('衣柜数据加载成功:', data);
+        } else {
+          console.error('衣柜数据加载失败:', data.error);
+        }
+      } catch (error) {
+        console.error('加载衣柜数据失败:', error);
+      }
+    }
+
+    // 显示衣物选择器
+    async function showGarmentSelector(type) {
+      currentGarmentType = type;
+      const modal = document.getElementById('garmentSelectorModal');
+      const title = document.getElementById('garmentSelectorTitle');
+      
+      if (type === 'upper') {
+        title.textContent = '选择上衣';
+      } else {
+        title.textContent = '选择下装';
+      }
+      
+      modal.style.display = 'flex';
+      
+      // 确保衣柜数据已加载
+      if (!closetData) {
+        console.log('衣柜数据未加载，正在加载...');
+        await loadClosetData();
+      }
+      
+      loadGarmentCategories(type);
+    }
+
+    // 关闭衣物选择器
+    function closeGarmentSelector() {
+      const modal = document.getElementById('garmentSelectorModal');
+      modal.style.display = 'none';
+    }
+
+    // 加载衣物分类
+    function loadGarmentCategories(type) {
+      console.log('=== 开始加载衣物分类 ===');
+      console.log('类型:', type);
+      console.log('衣柜数据:', closetData);
+      
+      if (!closetData) {
+        console.error('衣柜数据未加载');
+        return;
+      }
+      
+      const categoryList = document.getElementById('categoryList');
+      const garmentGrid = document.getElementById('garmentGrid');
+      
+      console.log('categoryList元素:', categoryList);
+      console.log('garmentGrid元素:', garmentGrid);
+      
+      if (!categoryList || !garmentGrid) {
+        console.error('未找到分类列表或衣物网格元素');
+        return;
+      }
+      
+      categoryList.innerHTML = '';
+      garmentGrid.innerHTML = '';
+      
+      const garments = type === 'upper' ? closetData.upper_garments : closetData.lower_garments;
+      console.log(`${type}衣物数据:`, garments);
+      console.log(`${type}衣物数量:`, garments ? garments.length : 0);
+      
+      if (!garments || garments.length === 0) {
+        console.log(`没有找到${type}类型的衣物`);
+        categoryList.innerHTML = '<div class="no-category">暂无衣物分类</div>';
+        garmentGrid.innerHTML = '<div class="no-garments">暂无衣物</div>';
+        return;
+      }
+      
+      const categories = [...new Set(garments.map(item => item.category))];
+      console.log('分类列表:', categories);
+      console.log('分类数量:', categories.length);
+      console.log('所有衣物详情:', garments.map(item => ({
+        filename: item.filename,
+        category: item.category,
+        url: item.url
+      })));
+      
+      categories.forEach((category, index) => {
+        console.log(`创建分类项: ${category} (索引: ${index})`);
+        const categoryItem = document.createElement('div');
+        categoryItem.className = 'category-item';
+                  categoryItem.innerHTML = `
+            <img src="${getCategoryIcon(category)}" alt="${getCategoryDisplayName(category)}" class="category-icon">
+            <span>${getCategoryDisplayName(category)}</span>
+          `;
+        
+        categoryItem.onclick = () => {
+          console.log(`点击分类: ${category}`);
+          // 移除其他选中状态
+          document.querySelectorAll('.category-item').forEach(item => item.classList.remove('active'));
+          categoryItem.classList.add('active');
+          
+          // 显示对应分类的衣物
+          showGarmentsByCategory(category, type);
+        };
+        
+        categoryList.appendChild(categoryItem);
+        console.log(`分类项已添加到DOM: ${category}`);
+        
+        // 默认选中第一个分类
+        if (index === 0) {
+          console.log(`默认选中第一个分类: ${category}`);
+          categoryItem.classList.add('active');
+          showGarmentsByCategory(category, type);
+        }
+      });
+      
+      console.log('=== 衣物分类加载完成 ===');
+    }
+
+    // 根据分类显示衣物
+    function showGarmentsByCategory(category, type) {
+      console.log(`=== 显示衣物分类 ===`);
+      console.log('分类:', category);
+      console.log('类型:', type);
+      
+      if (!closetData) {
+        console.error('衣柜数据未加载');
+        return;
+      }
+      
+      const garmentGrid = document.getElementById('garmentGrid');
+      console.log('garmentGrid元素:', garmentGrid);
+      
+      if (!garmentGrid) {
+        console.error('未找到衣物网格元素');
+        return;
+      }
+      
+      garmentGrid.innerHTML = '';
+      
+      const garments = type === 'upper' ? closetData.upper_garments : closetData.lower_garments;
+      const categoryGarments = garments.filter(item => item.category === category);
+      
+      console.log(`分类 ${category} 的衣物数量:`, categoryGarments.length);
+      console.log('分类衣物详情:', categoryGarments);
+      
+      if (categoryGarments.length === 0) {
+        garmentGrid.innerHTML = '<div class="no-garments">该分类暂无衣物</div>';
+        return;
+      }
+      
+      categoryGarments.forEach((garment, index) => {
+        console.log(`创建衣物项 ${index + 1}:`, garment);
+        const garmentItem = document.createElement('div');
+        garmentItem.className = 'garment-item';
+        garmentItem.innerHTML = `
+          <img src="${garment.url}" alt="衣物图片" title="${garment.remark}">
+        `;
+        
+        garmentItem.onclick = () => {
+          console.log(`选择衣物:`, garment);
+          // 移除其他选中状态
+          document.querySelectorAll('.garment-item').forEach(item => item.classList.remove('selected'));
+          garmentItem.classList.add('selected');
+          
+          // 选择衣物
+          selectGarment(garment, type);
+        };
+        
+        garmentGrid.appendChild(garmentItem);
+        console.log(`衣物项已添加到DOM: ${garment.filename}`);
+      });
+      
+      console.log(`=== 衣物显示完成，共 ${categoryGarments.length} 件 ===`);
+    }
+
+    // 获取分类图标
+    function getCategoryIcon(category) {
+      const iconMap = {
+        'T-SHIRT': "{% static 'icons/t-shirt.png' %}",
+        'SHIRT': "{% static 'icons/shirt.png' %}",
+        'COAT': "{% static 'icons/coat.png' %}",
+        'CARDIGAN': "{% static 'icons/cardigan.png' %}",
+        'SUIT': "{% static 'icons/suit.png' %}",
+        'SWEATSHIRT': "{% static 'icons/sweatshirt.png' %}",
+        'SHORTS': "{% static 'icons/short-pants.png' %}",
+        'TROUSERS': "{% static 'icons/long-pants.png' %}",
+        'SHORT-SKIRT': "{% static 'icons/short-skirt.png' %}"
+      };
+      return iconMap[category] || "{% static 'icons/t-shirt.png' %}";
+    }
+
+    // 获取分类显示名称
+    function getCategoryDisplayName(category) {
+      const nameMap = {
+        'T-SHIRT': 'T恤',
+        'SHIRT': '衬衫',
+        'COAT': '外套',
+        'CARDIGAN': '开衫',
+        'SUIT': '正装',
+        'SWEATSHIRT': '卫衣',
+        'SHORTS': '短裤',
+        'TROUSERS': '长裤',
+        'SHORT-SKIRT': '短裙'
+      };
+      return nameMap[category] || category;
+    }
+
+    // 选择衣物
+    function selectGarment(garment, type) {
+      if (type === 'upper') {
+        selectedUpperGarment = garment;
+        showSelectedGarment(garment, 'upper');
+      } else {
+        selectedLowerGarment = garment;
+        showSelectedGarment(garment, 'lower');
+      }
+      
+      closeGarmentSelector();
+      updateGenerateButton();
+    }
+
+    // 处理衣物上传
+    async function handleGarmentUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // 检查文件类型
+      if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件');
+        return;
+      }
+
+      // 检查文件大小（限制为5MB）
+      if (file.size > 5 * 1024 * 1024) {
+        alert('图片文件大小不能超过5MB');
+        return;
+      }
+
+      try {
+        // 显示上传进度
+        const uploadBtn = document.querySelector('.upload-btn');
+        const originalText = uploadBtn.innerHTML;
+        uploadBtn.innerHTML = '<i>⏳</i><span>处理中...</span>';
+        uploadBtn.disabled = true;
+
+        // 创建FormData
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('type', currentGarmentType); // 'upper' 或 'lower'
+
+        // 发送到后端处理
+        const response = await fetch("{% url 'process_uploaded_garment' %}", {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // 创建上传的衣物对象
+          const uploadedGarment = {
+            filename: result.filename,
+            url: result.processed_url,
+            category: 'UPLOADED',
+            remark: '用户上传的衣物',
+            is_uploaded: true
+          };
+
+          // 选择上传的衣物
+          selectGarment(uploadedGarment, currentGarmentType);
+          
+          // 显示成功消息
+          showNotification('衣物上传并处理成功！', 'success');
+        } else {
+          throw new Error(result.error || '上传失败');
+        }
+      } catch (error) {
+        console.error('上传失败:', error);
+        showNotification('上传失败: ' + error.message, 'error');
+      } finally {
+        // 恢复按钮状态
+        const uploadBtn = document.querySelector('.upload-btn');
+        uploadBtn.innerHTML = originalText;
+        uploadBtn.disabled = false;
+        
+        // 清空文件输入
+        event.target.value = '';
+      }
+    }
+
+    // 显示已选衣物
+    function showSelectedGarment(garment, type) {
+      const placeholder = document.getElementById(`${type}Placeholder`);
+      const selected = document.getElementById(`${type}Selected`);
+      const image = document.getElementById(`${type}Image`);
+      const name = document.getElementById(`${type}Name`);
+      
+      placeholder.style.display = 'none';
+      selected.style.display = 'flex';
+      
+      image.src = garment.url;
+    }
+
+    // 清除选择
+    function clearSelection(type) {
+      const placeholder = document.getElementById(`${type}Placeholder`);
+      const selected = document.getElementById(`${type}Selected`);
+      
+      placeholder.style.display = 'flex';
+      selected.style.display = 'none';
+      
+      if (type === 'upper') {
+        selectedUpperGarment = null;
+      } else {
+        selectedLowerGarment = null;
+      }
+      
+      updateGenerateButton();
+    }
+
+    // 更新生成按钮状态
+    function updateGenerateButton() {
+      const btn = document.getElementById('generateTryOnBtn');
+      btn.disabled = !(selectedUpperGarment && selectedLowerGarment);
+    }
+
+    // 生成自定义试穿效果
+    async function generateCustomTryOn() {
+      if (!selectedUpperGarment || !selectedLowerGarment) {
+        alert('请先选择上衣和下装');
+        return;
+      }
+      
+      const btn = document.getElementById('generateTryOnBtn');
+      btn.disabled = true;
+      btn.textContent = '生成中...';
+      
+      try {
+        const userSelect = document.getElementById('userSelect');
+        const userId = userSelect.value;
+        
+        const response = await fetch("{% url 'custom_try_on' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({
+            upper_garment: selectedUpperGarment.filename,
+            lower_garment: selectedLowerGarment.filename,
+            user_id: userId
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // 显示试穿结果
+          const container = document.getElementById('tryOnImageContainer');
+          container.innerHTML = `
+            <img src="${result.fit_path}" alt="试穿效果" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+          `;
+        } else {
+          alert('生成试穿效果失败: ' + result.error);
+        }
+      } catch (error) {
+        console.error('生成试穿效果失败:', error);
+        alert('生成试穿效果失败，请重试');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '生成试穿效果';
+      }
+    }
+
+    // 获取CSRF Token
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    // 页面加载完成后显示提示
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(() => {
+        showCustomTryOnHint();
+      }, 2000);
+    });
+
+    // 显示试穿占位图
+    function showTryOnPlaceholder() {
+      console.log('显示试穿占位图');
+      const modalRight = document.querySelector('.modal-right');
+      if (!modalRight) {
+        console.error('未找到modal-right元素');
+        return;
+      }
+      
+      // 清空右侧区域
+      modalRight.innerHTML = '';
+      
+      // 创建占位图
+      const placeholder = document.createElement('div');
+      placeholder.className = 'placeholder-image';
+      placeholder.innerHTML = '<div class="loading-spinner"></div><div style="margin-top: 10px; color: #999; font-size: 12px;">生成试穿效果中...</div>';
+      modalRight.appendChild(placeholder);
+      
+      // 模拟加载过程
+      setTimeout(() => {
+        console.log('开始调用generateTryOnImage');
+        generateTryOnImage();
+      }, 2000);
+    }
+
+    // 生成试穿图像
+    async function generateTryOnImage() {
+      console.log('=== generateTryOnImage 函数被调用 ===');
+      
+      if (!selectedUser) {
+        console.error('未选择用户');
+        showNotification('请先选择一个用户', 'error');
+        return;
+      }
+      
+      if (!window.currentOutfitData) {
+        console.error('没有搭配数据');
+        showNotification('没有可用的搭配数据', 'error');
+        return;
+      }
+      
+      console.log('开始生成试穿图像...');
+      console.log('选中用户:', selectedUser);
+      console.log('搭配数据:', window.currentOutfitData);
+      
+              try {
+          // 显示加载提示
+          showNotification('正在生成试穿图像，请稍候...', 'loading');
+        
+        // 准备试穿数据
+        const formData = new FormData();
+        
+        // 获取用户形体图片
+        const userPhotoUrl = selectedUser.photo_url;
+        if (!userPhotoUrl) {
+          throw new Error('用户没有上传形体图片');
+        }
+        
+        // 获取搭配图片
+        const outfitImageUrl = window.currentOutfitData.coord_url;
+        if (!outfitImageUrl) {
+          throw new Error('没有可用的搭配图片');
+        }
+        
+        // 下载并转换为文件
+        const humanImageBlob = await fetchImageAsBlob(userPhotoUrl);
+        const clothingImageBlob = await fetchImageAsBlob(outfitImageUrl);
+        
+        formData.append('human_image', humanImageBlob, 'human.jpg');
+        formData.append('clothing_image', clothingImageBlob, 'clothing.jpg');
+        
+        // 调用试穿API
+        console.log('准备调用试穿API...');
+        console.log('FormData内容:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}: ${value instanceof Blob ? `Blob(${value.size} bytes)` : value}`);
+        }
+        
+        const response = await fetch("{% url 'leffa_process' %}", {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+          }
+        });
+        
+        console.log('API响应状态:', response.status);
+        console.log('API响应状态文本:', response.statusText);
+        
+        if (!response.ok) {
+          throw new Error(`服务器错误: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('试穿结果:', result);
+        
+        if (result.success && result.image_data) {
+          // 显示试穿结果
+          displayTryOnResult(result.image_data);
+          showNotification('试穿图像生成成功！', 'success');
+        } else {
+          throw new Error(result.error || '试穿失败');
+        }
+        
+              } catch (error) {
+          console.error('生成试穿图像失败:', error);
+          showNotification(`试穿失败: ${error.message}`, 'error');
+          showRetryButton();
+        }
+    }
+    
+    // 获取图片为Blob
+    async function fetchImageAsBlob(imageUrl) {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`下载图片失败: ${response.status}`);
+      }
+      return await response.blob();
+    }
+    
+    // 显示试穿结果
+    function displayTryOnResult(imageData) {
+      const modalRight = document.querySelector('.modal-right');
+      if (!modalRight) return;
+      
+      // 清空右侧区域
+      modalRight.innerHTML = '';
+      
+      // 创建试穿结果图片
+      const tryOnImage = document.createElement('img');
+      tryOnImage.src = `data:image/jpeg;base64,${imageData}`;
+      tryOnImage.className = 'modal-image';
+      tryOnImage.alt = '试穿效果';
+      modalRight.appendChild(tryOnImage);
+      
+      console.log('试穿结果已显示在弹窗右侧');
+    }
+
+    // 显示重试按钮
+    function showRetryButton() {
+      const modalRight = document.querySelector('.modal-right');
+      if (!modalRight) return;
+      
+      // 清空右侧区域
+      modalRight.innerHTML = '';
+      
+      // 创建重试按钮
+      const retryButton = document.createElement('button');
+      retryButton.className = 'retry-button';
+      retryButton.innerHTML = '重试';
+      retryButton.onclick = function() {
+        showTryOnPlaceholder();
+      };
+      
+      const retryContainer = document.createElement('div');
+      retryContainer.className = 'placeholder-image';
+      retryContainer.innerHTML = '<div style="text-align: center; color: #999; font-size: 12px; margin-bottom: 10px;">试穿生成失败</div>';
+      retryContainer.appendChild(retryButton);
+      modalRight.appendChild(retryContainer);
+    }
+
+    // 评分功能相关变量
+    let currentRating = 0;
+    let ratingSubmitted = false;
+
+    // 设置评分
+    function setRating(rating) {
+      if (ratingSubmitted) return;
+      
+      console.log('setRating被调用，评分:', rating);
+      currentRating = rating;
+      
+      // 保存评分状态到全局变量
+      window.savedRating = rating;
+      window.savedRatingSubmitted = false;
+      
+      const stars = document.querySelectorAll('.star');
+      const ratingText = document.querySelector('.rating-text');
+      const submitBtn = document.querySelector('.submit-rating-btn');
+      
+      if (!stars.length) {
+        console.error('未找到星星元素');
+        return;
+      }
+      
+      console.log('找到星星元素数量:', stars.length);
+      
+      // 更新星星状态
+      stars.forEach((star, index) => {
+        const starRating = parseInt(star.dataset.rating);
+        console.log(`星星${index + 1}，评分:${starRating}，当前评分:${rating}`);
+        if (starRating <= rating) {
+          star.classList.add('active');
+          console.log(`星星${index + 1}已激活`);
+        } else {
+          star.classList.remove('active');
+          console.log(`星星${index + 1}已取消激活`);
+        }
+      });
+      
+      // 更新提示文本
+      const ratingDescriptions = {
+        1: '非常不满意',
+        2: '不满意',
+        3: '一般',
+        4: '满意',
+        5: '非常满意'
+      };
+      if (ratingText) {
+        ratingText.textContent = ratingDescriptions[rating] || '点击星星进行评分';
+      }
+      
+      // 启用提交按钮
+      if (submitBtn) {
+        submitBtn.disabled = false;
+      }
+      
+      console.log('评分设置完成并已保存');
+    }
+
+    // 提交评分
+    async function submitRating() {
+      if (ratingSubmitted || currentRating === 0) return;
+      
+      try {
+        // 准备评分数据
+        const ratingData = {
+          rating: currentRating,
+          outfit_data: window.currentOutfitData,
+          user_id: selectedUser ? selectedUser.id : null,
+          timestamp: new Date().toISOString()
+        };
+        
+        // 发送评分到后端（这里可以添加实际的API调用）
+        console.log('提交评分:', ratingData);
+        
+        // 模拟API调用
+        // const response = await fetch('/submit_rating/', {
+        //   method: 'POST',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //     'X-CSRFToken': '{{ csrf_token }}'
+        //   },
+        //   body: JSON.stringify(ratingData)
+        // });
+        
+        // 显示成功消息
+        showNotification(`评分提交成功！您给了${currentRating}颗星`, 'success');
+        
+        // 更新UI状态
+        ratingSubmitted = true;
+        
+        // 保存提交状态到全局变量
+        window.savedRatingSubmitted = true;
+        
+        const submitBtn = document.querySelector('.submit-rating-btn');
+        const ratingText = document.querySelector('.rating-text');
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = '已提交';
+        ratingText.innerHTML = '<span class="rating-submitted">✓ 评分已提交</span>';
+        
+        // 禁用星星点击
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => {
+          star.style.cursor = 'default';
+          star.onclick = null;
+        });
+        
+        console.log('评分已提交并保存状态');
+        
+      } catch (error) {
+        console.error('提交评分失败:', error);
+        showNotification('评分提交失败，请重试', 'error');
+      }
+    }
+
+    // 显示通知提示
+    function showNotification(message, type = 'info') {
+      // 移除之前的通知
+      const existingNotification = document.querySelector('.notification');
+      if (existingNotification) {
+        existingNotification.remove();
+      }
+      
+      // 创建新通知
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      
+      // 根据类型添加图标
+      let icon = '';
+      if (type === 'loading') {
+        icon = '<div class="loading-spinner"></div>';
+      } else if (type === 'success') {
+        icon = '✅ ';
+      } else if (type === 'error') {
+        icon = '❌ ';
+      }
+      
+      notification.innerHTML = `${icon}${message}`;
+      
+      // 添加到页面
+      document.body.appendChild(notification);
+      
+      // 显示动画
+      setTimeout(() => {
+        notification.classList.add('show');
+      }, 10);
+      
+      // 自动隐藏（除了loading类型）
+      if (type !== 'loading') {
+        setTimeout(() => {
+          notification.classList.add('hide');
+          setTimeout(() => {
+            if (notification.parentNode) {
+              notification.remove();
+            }
+          }, 300);
+        }, 3000);
+      }
+      
+      return notification;
+    }
+
+    // 关闭弹窗函数
+    function closeModal(modalOverlay) {
+      const modalContent = modalOverlay.querySelector('.modal-content');
+      modalContent.style.animation = 'slideDown 0.3s ease-in forwards';
+      
+      setTimeout(() => {
+        modalOverlay.remove();
+      }, 300);
+    }
+
+    // 测试星星点击功能
+    window.testStarClick = function() {
+      console.log('=== 测试星星点击功能 ===');
+      const stars = document.querySelectorAll('.star');
+      console.log('找到星星数量:', stars.length);
+      
+      if (stars.length === 0) {
+        console.log('没有找到星星元素，请先打开搭配弹窗');
+        return;
+      }
+      
+      stars.forEach((star, index) => {
+        console.log(`星星${index + 1}:`, star);
+        console.log(`- dataset.rating:`, star.dataset.rating);
+        console.log(`- classList:`, star.classList.toString());
+        console.log(`- onclick:`, star.onclick);
+        console.log(`- event listeners:`, star.getEventListeners ? star.getEventListeners() : '无法获取事件监听器');
+      });
+    };
+  </script>
+
+  <style>
+    @keyframes slideDown {
+      from {
+        transform: translateY(0);
+      }
+      to {
+        transform: translateY(100%);
+      }
+    }
+  </style>
+    </div>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户信息测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .user-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .user-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>用户信息测试页面</h1>
+    
+    <button onclick="testLoadUsers()">测试加载用户信息</button>
+    <button onclick="testLoadUser()">测试加载单个用户</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        function testLoadUsers() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h2>测试结果：</h2>';
+            
+            fetch("{% url 'load_users' %}")
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                
+                if (data.users && data.users.length > 0) {
+                    resultsDiv.innerHTML += '<div class="success">✅ 成功加载用户信息</div>';
+                    resultsDiv.innerHTML += `<div>用户数量: ${data.users.length}</div>`;
+                    
+                    data.users.forEach((user, index) => {
+                        resultsDiv.innerHTML += `
+                            <div class="user-item">
+                                <h3>用户 ${index + 1}</h3>
+                                <p><strong>ID:</strong> ${user.id}</p>
+                                <p><strong>姓名:</strong> ${user.name}</p>
+                                <p><strong>性别:</strong> ${user.gender}</p>
+                                <p><strong>年龄:</strong> ${user.age}</p>
+                                <p><strong>身高:</strong> ${user.height}cm</p>
+                                <p><strong>体重:</strong> ${user.weight}kg</p>
+                                <p><strong>风格:</strong> ${user.style}</p>
+                                <p><strong>照片URL:</strong> ${user.photo_url}</p>
+                                <img class="user-photo" src="${user.photo_url}" alt="用户照片" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div style="display:none; color:red;">图片加载失败</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    resultsDiv.innerHTML += '<div class="error">❌ 没有找到用户信息</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultsDiv.innerHTML += `<div class="error">❌ 加载失败: ${error.message}</div>`;
+            });
+        }
+        
+        function testLoadUser() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h2>单个用户测试结果：</h2>';
+            
+            fetch("{% url 'get_user' %}?id=1")
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                
+                if (data.id) {
+                    resultsDiv.innerHTML += '<div class="success">✅ 成功加载单个用户信息</div>';
+                    resultsDiv.innerHTML += `
+                        <div class="user-item">
+                            <h3>用户详情</h3>
+                            <p><strong>ID:</strong> ${data.id}</p>
+                            <p><strong>姓名:</strong> ${data.name}</p>
+                            <p><strong>性别:</strong> ${data.gender}</p>
+                            <p><strong>年龄:</strong> ${data.age}</p>
+                            <p><strong>身高:</strong> ${data.height}cm</p>
+                            <p><strong>体重:</strong> ${data.weight}kg</p>
+                            <p><strong>风格:</strong> ${data.style}</p>
+                            <p><strong>照片URL:</strong> ${data.photo_url}</p>
+                            <img class="user-photo" src="${data.photo_url}" alt="用户照片" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div style="display:none; color:red;">图片加载失败</div>
+                        </div>
+                    `;
+                } else {
+                    resultsDiv.innerHTML += '<div class="error">❌ 没有找到用户信息</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultsDiv.innerHTML += `<div class="error">❌ 加载失败: ${error.message}</div>`;
+            });
+        }
+    </script>
+</body>
+</html> 

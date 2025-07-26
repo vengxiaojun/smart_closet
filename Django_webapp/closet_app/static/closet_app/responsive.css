@@ -1,0 +1,609 @@
+/* 响应式设计基础样式 */
+:root {
+  /* 定义CSS变量，便于统一管理 */
+  --primary-color: #673ab7;
+  --secondary-color: #e4dcf5;
+  --text-color: #333;
+  --border-radius: 12px;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 基础响应式断点 */
+/* 超小屏幕 (手机竖屏) */
+@media (max-width: 480px) {
+  
+  .container {
+    width: 95vw;
+    padding: 16px;
+    margin-top: 16px;
+  }
+  
+  .weather-section {
+    padding: 12px;
+  }
+  
+  .city-title {
+    font-size: 20px;
+    padding: 10px 16px;
+  }
+  
+  .weather-card {
+    width: 80px;
+    padding: 6px;
+  }
+  
+  .weather-icon {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .suggest-section {
+    margin: 8px 12px;
+    padding: 12px;
+  }
+  
+  .match-cards {
+    gap: 8px;
+  }
+  
+  .match-card {
+    height: 100px;
+  }
+  
+  /* closet.html 特定样式 */
+  .header {
+    padding: 12px;
+  }
+  
+  .title {
+    font-size: 20px;
+  }
+  
+  .search-box {
+    padding: 4px 8px;
+  }
+  
+  .closet-container {
+    padding: 12px;
+    height: calc(100% - 70px - 60px);
+  }
+  
+  .category-list {
+    width: 70px;
+    padding: 6px;
+  }
+  
+  .category-item {
+    min-height: 35px;
+    padding: 3px;
+  }
+  
+  .category-item span {
+    font-size: 9px;
+  }
+  
+  .clothes-grid {
+    grid-gap: 12px;
+  }
+  
+  .clothes-item {
+    height: 140px;
+  }
+  
+  /* mirror.html 特定样式 */
+  .title-bar {
+    padding: 12px;
+  }
+  
+  .title {
+    font-size: 24px;
+  }
+  
+  .select-section {
+    padding: 16px;
+  }
+  
+  .select-box {
+    padding: 12px 16px;
+    margin-bottom: 20px;
+  }
+  
+  .input-section {
+    padding: 0 12px;
+  }
+  
+  .voice-btn {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 50px;
+  }
+  
+  .voice-btn i {
+    font-size: 24px;
+  }
+  
+  .input-box {
+    margin-bottom: 50px;
+    padding: 6px 10px;
+  }
+  
+  /* profile.html 特定样式 */
+  .header {
+    height: 160px;
+    padding-top: 16px;
+  }
+  
+  .user-info {
+    padding: 0 16px;
+  }
+  
+  .avatar {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .nickname {
+    font-size: 15px;
+  }
+  
+  .stats {
+    margin-top: 16px;
+  }
+  
+  .card {
+    margin: 8px 12px;
+    padding: 12px;
+  }
+  
+  .setting-item i {
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+    font-size: 18px;
+  }
+  
+  .function-item i {
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+    font-size: 16px;
+  }
+  
+  /* matching.html 特定样式 */
+  .top-nav {
+    padding: 8px 0;
+  }
+  
+  .top-nav-item i {
+    font-size: 20px;
+  }
+  
+  .top-nav-item span {
+    font-size: 11px;
+  }
+  
+  .section-title {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  
+  .scene-list {
+    margin: 8px 12px;
+  }
+  
+  .scene-header {
+    padding: 10px 12px;
+  }
+  
+  .scene-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+  
+  .scene-text {
+    font-size: 14px;
+  }
+  
+  .detail-content {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .detail-image {
+    width: 47%;
+  }
+}
+
+/* 小屏幕 (手机横屏/平板竖屏) */
+@media (min-width: 481px) and (max-width: 768px) {
+  
+  .container {
+    width: 90vw;
+    max-width: 500px;
+  }
+  
+  .weather-cards {
+    justify-content: center;
+  }
+  
+  .weather-card {
+    width: 90px;
+  }
+  
+  /* closet.html 特定样式 */
+  .closet-container {
+    height: calc(100% - 80px - 60px);
+  }
+  
+  .category-list {
+    width: 75px;
+  }
+  
+  .clothes-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  /* mirror.html 特定样式 */
+  .select-section {
+    padding: 20px;
+  }
+  
+  .input-section {
+    padding: 0 16px;
+  }
+  
+  /* profile.html 特定样式 */
+  .header {
+    height: 180px;
+  }
+  
+  .card {
+    margin: 10px 14px;
+  }
+  
+  /* matching.html 特定样式 */
+  .detail-content {
+    gap: 10px;
+  }
+  
+  .detail-image {
+    width: 48%;
+  }
+}
+
+/* 中等屏幕 (平板横屏/小桌面) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  
+  .container {
+    width: 85vw;
+    max-width: 700px;
+  }
+  
+  /* closet.html 特定样式 */
+  .closet-container {
+    height: calc(100% - 90px - 60px);
+  }
+  
+  .category-list {
+    width: 80px;
+  }
+  
+  .clothes-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  /* mirror.html 特定样式 */
+  .select-section {
+    padding: 24px;
+  }
+  
+  /* profile.html 特定样式 */
+  .header {
+    height: 200px;
+  }
+  
+  /* matching.html 特定样式 */
+  .detail-content {
+    gap: 12px;
+  }
+  
+  .detail-image {
+    width: 48%;
+  }
+}
+
+/* 大屏幕 (桌面) */
+@media (min-width: 1025px) {
+  
+  .container {
+    width: 80vw;
+    max-width: 600px;
+  }
+}
+
+/* 超宽屏幕 */
+@media (min-width: 1440px) {
+  
+  .container {
+    max-width: 800px;
+  }
+}
+
+/* 横屏适配 */
+@media (orientation: landscape) and (max-height: 600px) {
+  .iphone13-frame {
+    height: 100vh;
+    width: auto;
+    aspect-ratio: 16/9;
+  }
+  
+  .weather-section {
+    padding: 8px;
+  }
+  
+  .suggest-section {
+    margin: 6px 12px;
+    padding: 8px;
+  }
+  
+  .match-card {
+    height: 80px;
+  }
+  
+  /* closet.html 横屏适配 */
+  .closet-container {
+    height: calc(100% - 60px - 50px);
+  }
+  
+  .category-list {
+    width: 60px;
+  }
+  
+  .clothes-grid {
+    grid-template-columns: repeat(4, 1fr);
+    grid-gap: 8px;
+  }
+  
+  .clothes-item {
+    height: 120px;
+  }
+  
+  /* mirror.html 横屏适配 */
+  .select-section {
+    padding: 12px;
+  }
+  
+  .input-section {
+    padding: 0 12px;
+  }
+  
+  .voice-btn {
+    margin-bottom: 30px;
+  }
+  
+  .input-box {
+    margin-bottom: 30px;
+  }
+  
+  /* profile.html 横屏适配 */
+  .header {
+    height: 120px;
+  }
+  
+  .card {
+    margin: 6px 12px;
+    padding: 12px;
+  }
+  
+  /* matching.html 横屏适配 */
+  .detail-content {
+    max-height: 200px;
+    gap: 8px;
+  }
+  
+  .detail-image {
+    width: 47%;
+  }
+}
+
+/* 高分辨率屏幕适配 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .weather-icon {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  
+  .clothes-img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  
+  .avatar {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* 深色模式支持 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-color: #ffffff;
+    --secondary-color: #2d2d2d;
+  }
+  
+  .iphone13-frame {
+    background-color: #1a1a1a;
+  }
+  
+  .weather-section {
+    background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+  }
+  
+  .suggest-section {
+    background: #2d2d2d;
+  }
+  
+  .city-title {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+  }
+  
+  /* closet.html 深色模式 */
+  .header {
+    background-color: #2d2d2d;
+  }
+  
+  .category-list {
+    background-color: #3d3d3d;
+  }
+  
+  .category-item {
+    background-color: #4d4d4d;
+    color: #ffffff;
+  }
+  
+  .clothes-container {
+    background-color: rgba(128, 0, 128, 0.1);
+  }
+  
+  /* mirror.html 深色模式 */
+  .title-bar {
+    background-color: #2d2d2d;
+  }
+  
+  .select-box {
+    background-color: #3d3d3d;
+    border-color: #4d4d4d;
+  }
+  
+  .input-box {
+    background-color: #3d3d3d;
+  }
+  
+  /* profile.html 深色模式 */
+  .card {
+    background: #2d2d2d;
+  }
+  
+  .setting-item i,
+  .function-item i {
+    background: #3d3d3d;
+    color: #cccccc;
+  }
+  
+  /* matching.html 深色模式 */
+  .top-nav {
+    background-color: #2d2d2d;
+  }
+  
+  .scene-list li {
+    background-color: #2d2d2d;
+  }
+  
+  .scene-icon {
+    background-color: #4d4d4d;
+  }
+}
+
+/* 可访问性支持 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .city-title {
+    border-width: 3px;
+  }
+  
+  .weather-card {
+    border: 2px solid #000;
+  }
+  
+  .category-item {
+    border: 2px solid #000;
+  }
+  
+  .clothes-item {
+    border: 2px solid #000;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .iphone13-frame {
+    width: 100%;
+    height: auto;
+    border: none;
+    box-shadow: none;
+  }
+  
+  .bottom-nav {
+    display: none;
+  }
+  
+  .floating-btn {
+    display: none;
+  }
+}
+
+/* 触摸设备优化 */
+.touch-device .clothes-item:hover {
+  transform: none;
+}
+
+.touch-device .category-item:hover {
+  transform: none;
+}
+
+.touch-device .scene-list li:hover {
+  transform: none;
+}
+
+/* 设备特定优化 */
+.device-ios .iphone13-frame {
+  /* iOS特定优化 */
+  -webkit-overflow-scrolling: touch;
+}
+
+.device-android .iphone13-frame {
+  /* Android特定优化 */
+  overflow-scrolling: touch;
+}
+
+/* 横屏设备优化 */
+.orientation-landscape .closet-container {
+  flex-direction: row;
+}
+
+.orientation-landscape .category-list {
+  width: 60px;
+}
+
+.orientation-landscape .clothes-container {
+  flex: 1;
+}
+
+/* 小屏幕设备优化 */
+@media (max-width: 360px) {
+  .title {
+    font-size: 18px;
+  }
+  
+  .category-item span {
+    font-size: 8px;
+  }
+  
+  .clothes-grid {
+    grid-gap: 8px;
+  }
+  
+  .clothes-item {
+    height: 120px;
+  }
+} 

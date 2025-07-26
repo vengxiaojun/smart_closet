@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能魔镜</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            width: 200px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 80%;
+            max-width: 600px;
+            text-align: center;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        #fullscreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        #fullscreen img {
+            max-width: 90%;
+            max-height: 90%;
+        }
+        #closeBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: white;
+            color: black;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007BFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .try-on-container {
+            display: none;
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        .try-on-result {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .try-on-result img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .big-modal {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.4);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .big-modal-content {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            padding: 30px;
+            min-width: 350px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+            position: relative;
+            text-align: center;
+        }
+        .modal-close-btn {
+            margin-left: 20px;
+            font-size: 16px;
+            padding: 2px 10px;
+            border-radius: 5px;
+            border: none;
+            background: #eee;
+            color: #333;
+            cursor: pointer;
+        }
+        .modal-close-btn:hover {
+            background: #ddd;
+        }
+        .modal-narrow {
+            width: 80vw;
+            max-width: 600px;
+            min-width: 320px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>智能魔镜</h1>
+        <button id="closetManagerBtn">我的衣柜</button>
+        <button id="personalCenterBtn">个人中心</button>
+        <button id="outfitDisplayButton">衣物搭配</button>
+        <button id="clothingTryOnButton">衣物试穿</button>
+        <button id="speechButton">语音智能助手</button>
+        <button id="testServerBtn" style="background-color: #ff9800;">测试服务器连接</button>
+
+        <div id="result"></div>
+        
+        <!-- 试穿功能弹窗 -->
+        <div id="tryOnModal" class="big-modal" style="display:none;">
+            <div class="big-modal-content modal-narrow">
+                <button id="closeTryOnModalBtn" class="modal-close-btn" style="position:absolute; right:10px; top:10px;">关闭</button>
+            <h3>衣物试穿</h3>
+            <div id="imageInputs">
+                <div>
+                    <label>人体图像:</label>
+                    <input type="file" id="humanImageInput" accept="image/*">
+                    <img id="humanPreview" class="image-preview" style="display: none;">
+                </div>
+                <div>
+                    <label>衣物图像:</label>
+                    <input type="file" id="clothingImageInput" accept="image/*">
+                    <img id="clothingPreview" class="image-preview" style="display: none;">
+                </div>
+            </div>
+            <button id="generateTryOnBtn">生成试穿图像</button>
+            <div id="loading" class="loading">正在生成试穿图像...</div>
+            <div id="tryOnResult" class="try-on-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="fullscreen">
+        <img id="fullscreenImage" src="">
+        <button id="closeBtn">关闭</button>
+    </div>
+
+    <!-- 个人中心弹窗 -->
+    <div id="personalCenterModal" class="big-modal" style="display:none;">
+        <div class="big-modal-content modal-narrow">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <h2 style="margin:0;">个人中心</h2>
+                <button id="closePersonalCenterBtn" class="modal-close-btn">关闭</button>
+            </div>
+            <div id="bodyListPanel"></div>
+            <button id="addPoseBtn" style="margin-top:20px;">添加pose</button>
+        </div>
+    </div>
+    <!-- 添加pose选择弹窗 -->
+    <div id="bodyUploadModal" class="big-modal" style="display:none;">
+        <div class="big-modal-content">
+            <h3>添加pose</h3>
+            <button id="bodyUploadBtn">本地上传</button>
+            <button id="bodyCameraBtn">拍摄</button>
+            <button id="bodyUploadCancelBtn" class="modal-close-btn">取消</button>
+        </div>
+    </div>
+    <!-- 拍摄pose弹窗 -->
+    <div id="bodyCameraModal" class="big-modal" style="display:none;">
+        <div class="big-modal-content">
+            <video id="bodyCameraVideo" autoplay style="width:320px; height:240px; border:1px solid #ccc;"></video>
+            <br>
+            <button id="bodyCaptureBtn">拍照</button>
+            <button id="bodyCloseCameraBtn" class="modal-close-btn">关闭摄像头</button>
+        </div>
+    </div>
+    <!-- 衣物录入选择弹窗 -->
+    <div id="closetUploadModal" class="big-modal" style="display:none; z-index:2100;">
+        <div class="big-modal-content">
+            <h3>添加衣服</h3>
+            <button id="closetUploadBtn">本地上传</button>
+            <button id="closetCameraBtn">拍摄</button>
+            <button id="closetUploadCancelBtn" class="modal-close-btn">取消</button>
+        </div>
+    </div>
+    <!-- 拍摄弹窗 -->
+    <div id="closetCameraModal" class="big-modal" style="display:none;">
+        <div class="big-modal-content">
+            <video id="closetCameraVideo" autoplay style="width:320px; height:240px; border:1px solid #ccc;"></video>
+            <br>
+            <button id="closetCaptureBtn">拍照</button>
+            <button id="closetCloseCameraBtn" class="modal-close-btn">关闭摄像头</button>
+        </div>
+    </div>
+    <div id="closetManagerPanel" class="big-modal" style="display:none;">
+        <div class="big-modal-content modal-narrow">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+                <h2 style="margin:0;">我的衣柜</h2>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <button id="addClothingInPanelBtn" style="background:#4f8cff; color:#fff; font-size:15px; padding:6px 18px; border-radius:6px;">添加衣服</button>
+                    <button id="closeClosetManagerPanelBtn" class="modal-close-btn">关闭</button>
+                </div>
+            </div>
+            <div id="closetList"></div>
+        </div>
+    </div>
+    <div id="closetMsgBar" style="display:none; position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#4caf50; color:#fff; padding:10px 30px; border-radius:5px; z-index:2000; font-size:16px; box-shadow:0 2px 8px rgba(0,0,0,0.15);"></div>
+
+    <script>
+        // 图像预览功能
+        document.getElementById('humanImageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('humanPreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('clothingImageInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('clothingPreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 生成试穿图像按钮事件 - 使用Django后端API
+        document.getElementById('generateTryOnBtn').addEventListener('click', function() {
+            const humanFile = document.getElementById('humanImageInput').files[0];
+            const clothingFile = document.getElementById('clothingImageInput').files[0];
+
+            if (!humanFile || !clothingFile) {
+                alert('请选择人体图像和衣物图像');
+                return;
+            }
+
+            // 显示加载状态
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').innerHTML = '正在生成试穿图像...';
+
+            // 创建FormData对象
+            const formData = new FormData();
+            formData.append('human_image', humanFile);
+            formData.append('clothing_image', clothingFile);
+
+            // 发送请求到Django后端
+            fetch('/api/leffa_process/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                const resultDiv = document.getElementById('tryOnResult');
+                
+                if (data.success) {
+                    // 显示生成的试穿图像
+                    resultDiv.innerHTML = `
+                        <h4>试穿结果</h4>
+                        <img src="data:image/jpeg;base64,${data.image_data}" alt="试穿图像">
+                        <p>生成时间: ${new Date().toLocaleString()}</p>
+                        <p>状态: ${data.message}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p style="color: red;">试穿生成失败: ${data.error}</p>`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('tryOnResult').innerHTML = `<p style="color: red;">请求失败: ${error.message}</p>`;
+                console.error('试穿请求失败:', error);
+            });
+        });
+
+        document.getElementById('speechButton').addEventListener('click', function() {
+            // 此处需要填写语音接收、处理前端逻辑
+            // 开启麦克风，记录保存用户语音内容，发送请求到后端
+            navigator.mediaDevices.getUserMedia({ audio: true })
+              .then(stream => {
+                    // 处理音频流，发送语音内容到后端
+                    // 示例请求，实际需要替换
+                    fetch('/api/speech/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 'speech_content': '示例语音内容' })
+                    })
+                      .then(response => response.json())
+                      .then(data => {
+                            document.getElementById('result').innerHTML = JSON.stringify(data);
+                        });
+                })
+              .catch(error => console.error('麦克风访问失败:', error));
+        });
+
+        document.getElementById('personalCenterBtn').addEventListener('click', function() {
+            personalCenterModal.style.display = 'flex';
+            loadBodyList();
+        });
+
+        document.getElementById('closetUploadBtn').onclick = function() {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                let file = e.target.files[0];
+                if (file) {
+                    showClosetMsg('正在上传衣物图片...', true);
+                    uploadClothingImage(file);
+                }
+                document.getElementById('closetUploadModal').style.display = 'none';
+            };
+            input.click();
+        };
+
+        document.getElementById('closetCameraBtn').onclick = function() {
+            document.getElementById('closetUploadModal').style.display = 'none';
+            document.getElementById('closetCameraModal').style.display = 'flex';
+            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                let video = document.getElementById('closetCameraVideo');
+                video.srcObject = stream;
+                video.play();
+            });
+        };
+
+        document.getElementById('closetCaptureBtn').onclick = function() {
+            let video = document.getElementById('closetCameraVideo');
+            let canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 320;
+            canvas.height = video.videoHeight || 240;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+                showClosetMsg('正在上传衣物图片...', true);
+                uploadClothingImage(blob);
+                // 关闭摄像头
+                let stream = video.srcObject;
+                if (stream) stream.getTracks().forEach(track => track.stop());
+                document.getElementById('closetCameraModal').style.display = 'none';
+            }, 'image/jpeg');
+        };
+
+        document.getElementById('closetCloseCameraBtn').onclick = function() {
+            let video = document.getElementById('closetCameraVideo');
+            let stream = video.srcObject;
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            document.getElementById('closetCameraModal').style.display = 'none';
+        };
+
+        document.getElementById('closetUploadCancelBtn').onclick = function() {
+            document.getElementById('closetUploadModal').style.display = 'none';
+        };
+
+        function uploadClothingImage(fileOrBlob) {
+            console.log('开始上传衣物图片:', fileOrBlob);
+            let formData = new FormData();
+            formData.append('image', fileOrBlob);
+            
+            showClosetMsg('正在分类衣物图片...', true);
+            
+            fetch('/api/classify/', { method: 'POST', body: formData })
+                .then(res => {
+                    console.log('分类响应状态:', res.status);
+                    return res.json();
+                })
+                .then(data => {
+                    console.log('分类响应数据:', data);
+                    if (data.success) {
+                        // 分类成功，保存图片
+                        let label = data.label;
+                        console.log('分类标签:', label);
+                        
+                        showClosetMsg('分类成功，正在保存...', true);
+                        
+                        let saveForm = new FormData();
+                        saveForm.append('image', fileOrBlob);
+                        saveForm.append('label', label);
+                        
+                        fetch('/api/save_closet_image/', { method: 'POST', body: saveForm })
+                            .then(res2 => {
+                                console.log('保存响应状态:', res2.status);
+                                return res2.json();
+                            })
+                            .then(data2 => {
+                                console.log('保存响应数据:', data2);
+                                if (data2.success) {
+                                    showClosetMsg('上传并分类成功，已保存到衣柜！', true);
+                                    loadClosetList();
+                                } else {
+                                    showClosetMsg('保存失败：' + data2.error, false);
+                                }
+                            })
+                            .catch(err => {
+                                console.error('保存请求失败:', err);
+                                showClosetMsg('保存失败：' + err, false);
+                            });
+                    } else {
+                        console.error('分类失败:', data.error);
+                        showClosetMsg('分类失败：' + data.error, false);
+                    }
+                })
+                .catch(err => {
+                    console.error('分类请求失败:', err);
+                    showClosetMsg('上传失败：' + err, false);
+                });
+        }
+
+        document.getElementById('outfitDisplayButton').addEventListener('click', function() {
+            // 此处需要填写衣物搭配展示前端逻辑
+            // 发送请求到后端，获取试穿图和特定姿态，全屏展示试穿图片
+            fetch('/api/outfit_display/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+              .then(response => response.json())
+              .then(data => {
+                    const trialImages = data['试穿图'];
+                    const poses = data['特定姿态'];
+                    // 展示试穿图和特定姿态
+                    document.getElementById('fullscreenImage').src = trialImages[0];
+                    document.getElementById('fullscreen').style.display = 'flex';
+                });
+        });
+
+        document.getElementById('clothingTryOnButton').addEventListener('click', function() {
+            document.getElementById('tryOnModal').style.display = 'flex';
+        });
+
+        document.getElementById('closeBtn').addEventListener('click', function() {
+            document.getElementById('fullscreen').style.display = 'none';
+        });
+
+        document.getElementById('closetManagerBtn').onclick = function() {
+            document.getElementById('closetManagerPanel').style.display = 'flex';
+            loadClosetList();
+        };
+
+        // 全局变量保存衣柜数据
+        let closetData = [];
+
+        // 加载衣柜列表
+        function loadClosetList() {
+            fetch('/api/closet_list/')
+                .then(res => res.json())
+                .then(data => {
+                    let closetData = data.closet || [];
+                    let html = '';
+                    if (closetData.length === 0) {
+                        html = '<p style="color:#888;">您的衣柜空空如也~</p>';
+                    } else {
+                        closetData.forEach((item, idx) => {
+                            console.log('Image URL:', item.url);
+                            html += `
+                                <div style="display:flex;align-items:center;margin-bottom:100px;">
+                                    <!-- 设置具体的宽度和高度 -->
+                                    <img src="${item.url}" style="width: 100px; height: 100px; object-fit: cover; border: 1px solid #ccc; margin-right: 10px;" alt="${item.filename}">
+                                    <span>${item.filename}</span>
+                                    <input type="text" value="${item.remark || ''}" id="remark_${item.id}" style="margin:0 5px;">
+                                    <button onclick="updateRemark('${item.id}')">修改备注</button>
+                                    <button onclick="deleteClothing('${item.id}')">删除</button>
+                                </div>
+                            `;
+                        });
+                    }
+                    document.getElementById('closetList').innerHTML = html;
+                });
+        }
+
+        // 修改备注（仅前端本地）
+        window.updateRemark = function(id) {
+            let remark = document.getElementById('remark_' + id).value;
+            fetch('/api/closet_rename/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, remark })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    showClosetMsg('备注修改成功');
+                    loadClosetList();
+                } else {
+                    showClosetMsg('备注修改失败：' + data.error, false);
+                }
+            });
+        };
+
+        // 删除衣物（仅前端本地）
+        window.deleteClothing = function(id) {
+            if (!confirm('确定要删除这件衣物吗？')) return;
+            fetch('/api/closet_delete/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    showClosetMsg('删除成功');
+                    loadClosetList();
+                } else {
+                    showClosetMsg('删除失败：' + data.error, false);
+                }
+            });
+        };
+
+        document.getElementById('closeClosetManagerPanelBtn').onclick = function() {
+            document.getElementById('closetManagerPanel').style.display = 'none';
+        };
+
+        function showClosetMsg(msg, success=true) {
+            var bar = document.getElementById('closetMsgBar');
+            bar.innerText = msg;
+            bar.style.background = success ? '#4caf50' : '#f44336';
+            bar.style.display = 'block';
+            setTimeout(() => { bar.style.display = 'none'; }, 2000);
+        }
+
+        document.getElementById('closeTryOnModalBtn').onclick = function() {
+            document.getElementById('tryOnModal').style.display = 'none';
+        };
+
+        // 个人中心弹窗逻辑
+        const personalCenterBtn = document.getElementById('personalCenterBtn');
+        const personalCenterModal = document.getElementById('personalCenterModal');
+        const closePersonalCenterBtn = document.getElementById('closePersonalCenterBtn');
+        const bodyListPanel = document.getElementById('bodyListPanel');
+        const addPoseBtn = document.getElementById('addPoseBtn');
+        const bodyUploadModal = document.getElementById('bodyUploadModal');
+        const bodyUploadBtn = document.getElementById('bodyUploadBtn');
+        const bodyCameraBtn = document.getElementById('bodyCameraBtn');
+        const bodyUploadCancelBtn = document.getElementById('bodyUploadCancelBtn');
+        const bodyCameraModal = document.getElementById('bodyCameraModal');
+        const bodyCameraVideo = document.getElementById('bodyCameraVideo');
+        const bodyCaptureBtn = document.getElementById('bodyCaptureBtn');
+        const bodyCloseCameraBtn = document.getElementById('bodyCloseCameraBtn');
+
+        personalCenterBtn.onclick = function() {
+            personalCenterModal.style.display = 'flex';
+            loadBodyList();
+        };
+        closePersonalCenterBtn.onclick = function() {
+            personalCenterModal.style.display = 'none';
+        };
+        addPoseBtn.onclick = function() {
+            bodyUploadModal.style.display = 'flex';
+        };
+        bodyUploadCancelBtn.onclick = function() {
+            bodyUploadModal.style.display = 'none';
+        };
+        bodyUploadBtn.onclick = function() {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                let file = e.target.files[0];
+                if (file) {
+                    showClosetMsg('正在上传pose照片...', true);
+                    uploadBodyImage(file);
+                }
+                bodyUploadModal.style.display = 'none';
+            };
+            input.click();
+        };
+        bodyCameraBtn.onclick = function() {
+            bodyUploadModal.style.display = 'none';
+            bodyCameraModal.style.display = 'flex';
+            navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+                bodyCameraVideo.srcObject = stream;
+                bodyCameraVideo.play();
+            });
+        };
+        bodyCaptureBtn.onclick = function() {
+            let video = bodyCameraVideo;
+            let canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 320;
+            canvas.height = video.videoHeight || 240;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+                showClosetMsg('正在上传pose照片...', true);
+                uploadBodyImage(blob);
+                // 关闭摄像头
+                let stream = video.srcObject;
+                if (stream) stream.getTracks().forEach(track => track.stop());
+                bodyCameraModal.style.display = 'none';
+            }, 'image/jpeg');
+        };
+        bodyCloseCameraBtn.onclick = function() {
+            let video = bodyCameraVideo;
+            let stream = video.srcObject;
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            bodyCameraModal.style.display = 'none';
+        };
+        function uploadBodyImage(fileOrBlob) {
+            let formData = new FormData();
+            formData.append('image', fileOrBlob);
+            fetch('/api/save_body_image/', { method: 'POST', body: formData })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showClosetMsg('上传成功，已保存到个人中心！', true);
+                        loadBodyList();
+                    } else {
+                        showClosetMsg('保存失败：' + data.error, false);
+                    }
+                })
+                .catch(err => {
+                    showClosetMsg('上传失败：' + err, false);
+                });
+        }
+        function loadBodyList() {
+            fetch('/api/body_list/').then(res => res.json()).then(data => {
+                let html = '';
+                if (!data.body || data.body.length === 0) {
+                    html = '<p>您还没有上传pose照片~</p>';
+                } else {
+                    data.body.forEach(item => {
+                        html += `
+                            <div style="display:flex;align-items:center;margin-bottom:10px;">
+                                <img src="${item.url}" style="width:80px;height:80px;object-fit:cover;border:1px solid #ccc;margin-right:10px;">
+                                <span>${item.filename}</span>
+                                <input type="text" value="${item.remark || ''}" id="body_remark_${item.id}" style="margin:0 5px;">
+                                <button onclick="updateBodyRemark('${item.id}')">修改备注</button>
+                            </div>
+                        `;
+                    });
+                }
+                bodyListPanel.innerHTML = html;
+            });
+        }
+        window.updateBodyRemark = function(id) {
+            let remark = document.getElementById('body_remark_' + id).value;
+            fetch('/api/body_rename/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, remark })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    showClosetMsg('备注修改成功');
+                    loadBodyList();
+                } else {
+                    showClosetMsg('备注修改失败：' + data.error, false);
+                }
+            });
+        };
+
+        // "我的衣柜"弹窗内的"添加衣服"按钮
+        document.getElementById('addClothingInPanelBtn').onclick = function() {
+            document.getElementById('closetUploadModal').style.display = 'flex';
+        };
+
+        // 测试服务器连接
+        document.getElementById('testServerBtn').onclick = function() {
+            showClosetMsg('正在测试服务器连接...', true);
+            fetch('/api/test_classify/', { 
+                method: 'POST'
+            })
+            .then(res => {
+                console.log('测试响应状态:', res.status);
+                return res.json();
+            })
+            .then(data => {
+                console.log('测试响应数据:', data);
+                if (data.success) {
+                    showClosetMsg('服务器连接正常！分类标签: ' + data.label, true);
+                } else {
+                    showClosetMsg('服务器连接异常：' + data.error, false);
+                }
+            })
+            .catch(err => {
+                console.error('测试请求失败:', err);
+                showClosetMsg('服务器连接失败：' + err.message, false);
+            });
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云端存储测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        .loading {
+            color: #007BFF;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>云端存储功能测试</h1>
+        
+        <div class="test-section">
+            <h3>1. 衣物分类上传测试</h3>
+            <input type="file" id="clothingFile" accept="image/*">
+            <button onclick="testClassify()">测试衣物分类</button>
+            <div id="classifyResult" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. 衣柜列表获取测试</h3>
+            <button onclick="testClosetList()">获取衣柜列表</button>
+            <div id="closetResult" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. 身体图片上传测试</h3>
+            <input type="file" id="bodyFile" accept="image/*">
+            <button onclick="testBodyUpload()">测试身体图片上传</button>
+            <div id="bodyResult" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. 身体列表获取测试</h3>
+            <button onclick="testBodyList()">获取身体列表</button>
+            <div id="bodyListResult" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>5. 服务器连接测试</h3>
+            <button onclick="testServerConnection()">测试服务器连接</button>
+            <div id="serverResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        function showResult(elementId, message, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = 'result ' + (isSuccess ? 'success' : 'error');
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.textContent = '正在处理...';
+            element.className = 'result loading';
+        }
+
+        async function testClassify() {
+            const fileInput = document.getElementById('clothingFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showResult('classifyResult', '请选择图片文件', false);
+                return;
+            }
+            
+            showLoading('classifyResult');
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            try {
+                const response = await fetch('/api/classify/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('classifyResult', 
+                        `分类成功！\n标签: ${result.label}\n特征: ${result.features}\n文件名: ${result.filename}\n消息: ${result.message}`, 
+                        true
+                    );
+                } else {
+                    showResult('classifyResult', `分类失败: ${result.error}`, false);
+                }
+            } catch (error) {
+                showResult('classifyResult', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        async function testClosetList() {
+            showLoading('closetResult');
+            
+            try {
+                const response = await fetch('/api/closet_list/');
+                const result = await response.json();
+                
+                if (result.closet) {
+                    const closetInfo = result.closet.map(item => 
+                        `文件名: ${item.filename}\nURL: ${item.url}\n备注: ${item.remark || '无'}`
+                    ).join('\n\n');
+                    
+                    showResult('closetResult', 
+                        `衣柜列表获取成功！\n共 ${result.closet.length} 件衣物:\n\n${closetInfo}`, 
+                        true
+                    );
+                } else {
+                    showResult('closetResult', `获取失败: ${result.error || '未知错误'}`, false);
+                }
+            } catch (error) {
+                showResult('closetResult', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        async function testBodyUpload() {
+            const fileInput = document.getElementById('bodyFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showResult('bodyResult', '请选择图片文件', false);
+                return;
+            }
+            
+            showLoading('bodyResult');
+            
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            try {
+                const response = await fetch('/api/save_body_image/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('bodyResult', 
+                        `上传成功！\n文件名: ${result.filename}\nID: ${result.id}\nURL: ${result.url}`, 
+                        true
+                    );
+                } else {
+                    showResult('bodyResult', `上传失败: ${result.error}`, false);
+                }
+            } catch (error) {
+                showResult('bodyResult', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        async function testBodyList() {
+            showLoading('bodyListResult');
+            
+            try {
+                const response = await fetch('/api/body_list/');
+                const result = await response.json();
+                
+                if (result.body) {
+                    const bodyInfo = result.body.map(item => 
+                        `ID: ${item.id}\n文件名: ${item.filename}\nURL: ${item.url}\n备注: ${item.remark || '无'}`
+                    ).join('\n\n');
+                    
+                    showResult('bodyListResult', 
+                        `身体列表获取成功！\n共 ${result.body.length} 张图片:\n\n${bodyInfo}`, 
+                        true
+                    );
+                } else {
+                    showResult('bodyListResult', `获取失败: ${result.error || '未知错误'}`, false);
+                }
+            } catch (error) {
+                showResult('bodyListResult', `请求失败: ${error.message}`, false);
+            }
+        }
+
+        async function testServerConnection() {
+            showLoading('serverResult');
+            
+            try {
+                const response = await fetch('/api/test_classify/', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('serverResult', 
+                        `服务器连接正常！\n分类标签: ${result.label}\n消息: ${result.message}`, 
+                        true
+                    );
+                } else {
+                    showResult('serverResult', `连接异常: ${result.error}`, false);
+                }
+            } catch (error) {
+                showResult('serverResult', `连接失败: ${error.message}`, false);
+            }
+        }
+    </script>
+</body>
+</html> 

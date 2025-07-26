@@ -1,0 +1,12 @@
+{
+  "id": "短裤测试",
+  "name": "短裤测试",
+  "gender": "女",
+  "age": "19",
+  "height": "170",
+  "weight": "45",
+  "style": "休闲",
+  "photo_url": "/static/userinf/短裤测试.jpg",
+  "is_default": false,
+  "default_set_time": 1753098298.364683
+}

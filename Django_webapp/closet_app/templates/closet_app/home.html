@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#673ab7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>智能衣橱 - 天气穿搭助手</title>
+  <!-- 加载静态文件标签 -->
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'closet_app/responsive.css' %}">
+  <script src="{% static 'closet_app/device-adapter.js' %}"></script>
+  <style>
+    /* 重置默认样式 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    /* 为页面主体添加底部边距，防止被固定导航栏遮挡 */
+    body {
+      padding-bottom: 80px;
+      background-color: #E4DCF5;
+    }
+
+    /* 页面容器最大宽度限制 */
+    .page-container {
+      max-width: 440px; /* 比一般手机屏幕(375px)宽约17% */
+      margin: 0 auto;
+      background-color: #E4DCF5;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden; /* 禁用纵向滑动 */
+      touch-action: none; /* 禁用触摸滑动 */
+      -webkit-overflow-scrolling: none; /* 禁用iOS滚动 */
+    }
+
+    /* 手机端禁用滑动 */
+    @media (max-width: 440px) {
+      body {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        -webkit-overflow-scrolling: none;
+      }
+      
+      html {
+        overflow: hidden;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+      }
+    }
+
+    /* 在电脑端显示边框效果 */
+    @media (min-width: 441px) {
+      .page-container {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+        margin-top: 20px; /* 在电脑端添加顶部边距 */
+        margin-bottom: 20px; /* 在电脑端添加底部边距 */
+        border-radius: 12px; /* 圆角效果 */
+      }
+    }
+
+    /* 重置 i 标签的斜体样式，确保图标正常显示 */
+    i {
+      font-style: normal;
+    }
+
+
+
+    /* 天气模块 */
+    .weather-section {
+      background: linear-gradient(180deg, #c9e8ff 0%, #e4f2ff 100%);
+      padding: 16px;
+    }
+
+    .city-title {
+      font-size: 24px;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(103, 58, 183, 0.2);
+      border-radius: 20px;
+      padding: 12px 20px;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(103, 58, 183, 0.1);
+      backdrop-filter: blur(10px);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .city-title:hover {
+      border-color: rgba(103, 58, 183, 0.4);
+      box-shadow: 0 6px 16px rgba(103, 58, 183, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .city-title:focus {
+      border-color: #673ab7;
+      box-shadow: 0 0 0 3px rgba(103, 58, 183, 0.1);
+    }
+
+    .city-title option {
+      background: white;
+      color: #333;
+      padding: 8px;
+      font-size: 16px;
+    }
+
+    .weather-cards {
+      display: flex;
+      overflow-x: auto;
+      /* 横向滚动 */
+      padding-bottom: 8px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+      /* 确保触摸滚动正常工作 */
+      touch-action: pan-x;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      /* 增强滑动响应性 */
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      /* 确保容器有足够的高度来响应触摸 */
+      min-height: 120px;
+      /* 添加内边距确保触摸区域足够大 */
+      padding: 8px 0;
+    }
+    
+    .weather-cards::-webkit-scrollbar {
+      display: none; /* Chrome, Safari and Opera */
+    }
+    
+    /* 滑动提示动画 */
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(-50%) translateX(20px); }
+      20% { opacity: 1; transform: translateY(-50%) translateX(0); }
+      80% { opacity: 1; transform: translateY(-50%) translateX(0); }
+      100% { opacity: 0; transform: translateY(-50%) translateX(-20px); }
+    }
+
+    .weather-card {
+      flex: 0 0 auto;
+      width: 100px;
+      background: #fff;
+      border-radius: 8px;
+      margin-right: 8px;
+      padding: 8px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      /* 增强触摸响应 */
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      /* 确保卡片有足够的触摸区域 */
+      min-height: 100px;
+      /* 防止触摸时出现选中效果 */
+      pointer-events: auto;
+    }
+
+    .weather-date {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 4px;
+    }
+
+    .weather-icon {
+      width: 36px;
+      height: 36px;
+      margin: 4px auto;
+    }
+
+    .weather-temp {
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* 穿搭建议模块 */
+    .suggest-section {
+      background: #f2f2f2;
+      margin: 12px 16px;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .suggest-title {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .suggest-title .hot-tag {
+      font-size: 28px;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+
+    /* 定义不同天气状态下的颜色样式 */
+    .suggest-title .hot-tag.hot {
+      color: #e63946;
+    }
+
+    .suggest-title .hot-tag.rain {
+      color: #2196F3;
+    }
+
+    .suggest-title .hot-tag.cloudy {
+      color: #999;
+    }
+
+    .suggest-title .text {
+      font-size: 16px;
+      color: #333;
+    }
+
+    .schedule-btn {
+      display: inline-block;
+      background: #e9c46a;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+
+    /* 今日搭配模块 */
+    .match-section {
+      margin: 0 16px 12px;
+    }
+
+    .match-header {
+      font-size: 16px;
+      color: #333;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .match-desc {
+      font-size: 14px;
+      color: #f4a261;
+      margin-bottom: 12px;
+    }
+
+    .match-cards {
+      display: flex;
+      gap: 12px;
+    }
+
+    .match-card {
+      flex: 1;
+      height: 120px;
+      background: #ccc;
+      border-radius: 8px;
+    }
+
+    /* 底部导航栏（复用通用样式） */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 440px; /* 与页面容器保持一致 */
+      height: 60px;
+      background: #fff;
+      border-top: 1px solid #f0f0f0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    /* 在电脑端为底部导航栏添加边框效果 */
+    @media (min-width: 441px) {
+      .bottom-nav {
+        border-left: 1px solid rgba(103, 58, 183, 0.1);
+        border-right: 1px solid rgba(103, 58, 183, 0.1);
+        border-bottom: 1px solid rgba(103, 58, 183, 0.1);
+        border-radius: 0 0 12px 12px; /* 底部圆角 */
+        box-shadow: 0 0 20px rgba(103, 58, 183, 0.1);
+      }
+    }
+
+    .nav-item {
+      text-align: center;
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      padding: 8px 0;
+      min-height: 60px;
+    }
+    .nav-item:hover {
+      background-color: #f5f5f5;
+    }
+    .nav-item:active {
+      background-color: #e0e0e0;
+    }
+    .nav-item i {
+      font-size: 22px;
+      color: #999;
+      display: block;
+      margin-bottom: 2px;
+      pointer-events: none;
+    }
+    .nav-item span {
+      font-size: 12px;
+      color: #999;
+      pointer-events: none;
+    }
+    .nav-item.active span {
+      color: #673ab7;
+    }
+
+    /* 中间悬浮按钮 */
+    .floating-btn {
+      position: fixed;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 56px;
+      height: 56px;
+      background: #673ab7;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+
+    /* 弹窗样式 */
+    .outfit-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .outfit-modal.show {
+      opacity: 1;
+    }
+
+    .outfit-modal-content {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 24px 16px;
+      max-width: 420px;
+      width: 90vw;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      position: relative;
+      transform: scale(0.8) translateY(-20px);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .outfit-modal.show .outfit-modal-content {
+      transform: scale(1) translateY(0);
+    }
+
+    .outfit-modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      font-size: 24px;
+      color: #999;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+      z-index: 9999;
+    }
+
+    .outfit-modal-close:hover {
+      background: rgba(255, 255, 255, 1);
+      color: #666;
+      transform: scale(1.1);
+    }
+
+    .outfit-image-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .outfit-image {
+      width: 100%;
+      max-width: 150px;
+      max-height: 260px;
+      border-radius: 12px;
+      object-fit: contain;
+      background: rgba(245, 245, 245, 0.8);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .outfit-image:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .outfit-image.switching {
+      animation: imageSwitch 0.6s ease-in-out;
+    }
+
+    @keyframes imageSwitch {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(0.95); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .mode-indicator {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: bold;
+      transition: all 0.3s ease;
+      z-index: 9997;
+    }
+
+    .switch-mode-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(103, 58, 183, 0.8);
+      color: white;
+      border: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 9998;
+    }
+
+    .switch-mode-btn:hover {
+      background: rgba(103, 58, 183, 1);
+      transform: scale(1.1);
+    }
+  </style>
+</head>
+
+<body>
+    <div class="page-container">
+      <!-- 合并城市选择和天气模块 -->
+      <div class="weather-section">
+      <select id="citySelect" class="city-title" onchange="getWeather()">
+        <option value="南京市">南京市</option>
+        <option value="北京市">北京市</option>
+        <option value="乌鲁木齐市">乌鲁木齐市</option>
+        <option value="厦门市">厦门市</option>
+        <option value="三亚市">三亚市</option>
+        <option value="通辽市">通辽市</option>
+        <option value="上海市">上海市</option>
+        <option value="广州市">广州市</option>
+        <option value="深圳市">深圳市</option>
+        <option value="成都市">成都市</option>
+        <option value="杭州市">杭州市</option>
+        <option value="武汉市">武汉市</option>
+        <option value="西安市">西安市</option>
+        <option value="重庆市">重庆市</option>
+        <option value="天津市">天津市</option>
+        <option value="沈阳市">沈阳市</option>
+        <option value="大连市">大连市</option>
+        <option value="长沙市">长沙市</option>
+        <option value="郑州市">郑州市</option>
+        <option value="福州市">福州市</option>
+        <option value="昆明市">昆明市</option>
+        <!-- 可根据需要添加更多城市 -->
+      </select>
+      <div class="weather-cards" id="weatherCards"></div>
+    </div>
+
+    <!-- 穿搭建议模块 -->
+    <div class="suggest-section">
+      <div class="suggest-title">
+        <div class="hot-tag" id="hotTag">请稍等</div>
+        <div class="text" id="suggestText">正在获取天气信息...</div>
+      </div>
+      <a href="#" class="schedule-btn">暂无日程</a>
+    </div>
+
+    <!-- 今日搭配模块 -->
+    <div class="match-section">
+      <div class="match-header">今日搭配</div>
+      <div class="match-desc" id="matchDesc">今日适合清新夏日风</div>
+      <div class="match-cards" id="matchCards"></div>
+    </div>
+
+    <!-- 中间悬浮按钮 -->
+    <div class="floating-btn">
+      <a href="{% url 'mirror' %}" style="text-decoration: none;">
+        <i>🪞</i>
+      </a>
+    </div>
+
+    <!-- 底部导航栏 -->
+     {% load static %}
+    <div class="bottom-nav">
+      <div class="nav-item active">
+        <i>🏠</i>
+        <span>Home</span>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'closet' %}" style="text-decoration: none;">
+          <i>👕</i>
+          <span>closet</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'match' %}" style="text-decoration: none;">
+          <i>⭐️</i>
+          <span>favourite</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="{% url 'profile' %}" style="text-decoration: none;">
+          <i>👤</i>
+          <span>profile</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 搭配弹窗 -->
+    <div id="outfitModal" class="outfit-modal">
+      <div class="outfit-modal-content">
+        <button class="outfit-modal-close" onclick="closeOutfitModal()">×</button>
+        <div style="display:flex;flex-direction:row;gap:18px;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div class="outfit-image-container">
+              <img id="outfitImage1" class="outfit-image coord-mode" style="width:100%;max-width:150px;max-height:260px;border-radius:12px;object-fit:contain;background:rgba(245,245,245,0.8);margin-bottom:8px;cursor:pointer;" onclick="handleOutfitImageClick()" data-filename="" data-base="">
+              <div class="mode-indicator">搭配</div>
+              <button class="switch-mode-btn" onclick="toggleImageMode(document.getElementById('outfitImage1'))" title="切换模式">🔄</button>
+            </div>
+            <div style="text-align:center;font-size:13px;color:#673ab7;font-weight:bold;">推荐搭配</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <script>
+    // 显示通知函数
+    function showNotification(message, type = 'info') {
+        // 创建通知元素
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            max-width: 300px;
+            word-wrap: break-word;
+        `;
+        
+        // 根据类型设置样式
+        if (type === 'error') {
+            notification.style.backgroundColor = '#f44336';
+        } else if (type === 'success') {
+            notification.style.backgroundColor = '#4CAF50';
+        } else {
+            notification.style.backgroundColor = '#2196F3';
+        }
+        
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        
+        // 3秒后自动移除
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 3000);
+    }
+    
+    // 页面加载完成时调用获取天气函数
+    window.addEventListener('load', function() {
+        getWeather();
+        initWeatherCardsTouchScroll();
+    });
+
+    // 弹窗相关函数
+    function showOutfitModal(baseFilename, coordFilename, imageUrl) {
+      const modal = document.getElementById('outfitModal');
+      const img = document.getElementById('outfitImage1');
+      
+      // 设置图片源和属性
+      img.src = imageUrl;
+      img.setAttribute('data-filename', coordFilename);
+      img.setAttribute('data-base', baseFilename);
+      img.setAttribute('data-showing-fit', 'false');
+      
+      // 重置样式类
+      img.classList.remove('fit-mode');
+      img.classList.add('coord-mode');
+      
+      // 重置状态指示器
+      const indicator = img.parentElement.querySelector('.mode-indicator');
+      if (indicator) {
+        indicator.textContent = '搭配';
+        indicator.style.background = 'rgba(0, 0, 0, 0.7)';
+      }
+      
+      // 显示弹窗
+      modal.style.display = 'flex';
+      setTimeout(() => {
+        modal.classList.add('show');
+      }, 10);
+    }
+
+    function closeOutfitModal() {
+      const modal = document.getElementById('outfitModal');
+      modal.classList.remove('show');
+      setTimeout(() => {
+        modal.style.display = 'none';
+      }, 300);
+    }
+
+    // 处理搭配图片点击事件
+    async function handleOutfitImageClick() {
+      const img = document.getElementById('outfitImage1');
+      const baseFilename = img.getAttribute('data-base');
+      const coordFilename = img.getAttribute('data-filename');
+      
+      console.log('=== 处理搭配图片点击事件 ===');
+      console.log('基础文件名:', baseFilename);
+      console.log('搭配文件名:', coordFilename);
+      
+      // 检查当前显示的是搭配图还是试穿图
+      const isShowingFit = img.getAttribute('data-showing-fit') === 'true';
+      
+      if (isShowingFit) {
+        // 当前显示试穿图，切换回搭配图
+        await switchToCoordMode(img, baseFilename, coordFilename);
+        return;
+      }
+      
+      // 检查是否存在对应的试穿图像
+      const fitFilename = coordFilename.replace('.jpg', '_FIT.jpg');
+      const fitPath = `/static/recoms/${baseFilename}/${fitFilename}`;
+      const coordPath = `/static/recoms/${baseFilename}/${coordFilename}`;
+      
+      console.log('试穿图像路径:', fitPath);
+      console.log('搭配图像路径:', coordPath);
+      
+      // 检查试穿图像是否存在
+      try {
+        const fitResponse = await fetch(fitPath, { method: 'HEAD' });
+        const fitExists = fitResponse.ok;
+        
+        if (fitExists) {
+          console.log('试穿图像存在，切换到试穿效果');
+          // 试穿图像存在，切换到试穿效果
+          await switchToFitMode(img, fitPath);
+        } else {
+          console.log('试穿图像不存在，生成试穿效果');
+          // 试穿图像不存在，生成试穿效果
+          await generateTryOnImage(baseFilename, coordFilename, img);
+        }
+      } catch (error) {
+        console.log('检查试穿图像失败，生成新的试穿效果');
+        // 检查失败，生成新的试穿效果
+        await generateTryOnImage(baseFilename, coordFilename, img);
+      }
+    }
+
+    // 切换到试穿模式
+    async function switchToFitMode(imgElement, fitPath) {
+      // 添加切换动画
+      imgElement.classList.add('switching');
+      
+      // 等待动画开始
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 切换图片源
+      imgElement.src = fitPath;
+      imgElement.setAttribute('data-showing-fit', 'true');
+      
+      // 更新样式类
+      imgElement.classList.remove('coord-mode');
+      imgElement.classList.add('fit-mode');
+      
+      // 更新状态指示器
+      const indicator = imgElement.parentElement.querySelector('.mode-indicator');
+      if (indicator) {
+        indicator.textContent = '试穿';
+        indicator.style.background = 'rgba(103, 58, 183, 0.8)';
+      }
+      
+      // 等待动画完成
+      setTimeout(() => {
+        imgElement.classList.remove('switching');
+      }, 600);
+      
+      showNotification('已切换到试穿效果', 'success');
+    }
+
+    // 切换到搭配模式
+    async function switchToCoordMode(imgElement, baseFilename, coordFilename) {
+      // 添加切换动画
+      imgElement.classList.add('switching');
+      
+      // 等待动画开始
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 切换图片源
+      const coordPath = `/static/recoms/${baseFilename}/${coordFilename}`;
+      imgElement.src = coordPath;
+      imgElement.removeAttribute('data-showing-fit');
+      
+      // 更新样式类
+      imgElement.classList.remove('fit-mode');
+      imgElement.classList.add('coord-mode');
+      
+      // 更新状态指示器
+      const indicator = imgElement.parentElement.querySelector('.mode-indicator');
+      if (indicator) {
+        indicator.textContent = '搭配';
+        indicator.style.background = 'rgba(0, 0, 0, 0.7)';
+      }
+      
+      // 等待动画完成
+      setTimeout(() => {
+        imgElement.classList.remove('switching');
+      }, 600);
+      
+      showNotification('已切换回搭配效果', 'success');
+    }
+
+    // 切换图片模式（通过按钮）
+    async function toggleImageMode(imgElement) {
+      const baseFilename = imgElement.getAttribute('data-base');
+      const coordFilename = imgElement.getAttribute('data-filename');
+      const isShowingFit = imgElement.getAttribute('data-showing-fit') === 'true';
+      
+      if (isShowingFit) {
+        await switchToCoordMode(imgElement, baseFilename, coordFilename);
+      } else {
+        const fitFilename = coordFilename.replace('.jpg', '_FIT.jpg');
+        const fitPath = `/static/recoms/${baseFilename}/${fitFilename}`;
+        
+        try {
+          const fitResponse = await fetch(fitPath, { method: 'HEAD' });
+          const fitExists = fitResponse.ok;
+          
+          if (fitExists) {
+            await switchToFitMode(imgElement, fitPath);
+          } else {
+            await generateTryOnImage(baseFilename, coordFilename, imgElement);
+          }
+        } catch (error) {
+          await generateTryOnImage(baseFilename, coordFilename, imgElement);
+        }
+      }
+    }
+    
+    // 生成试穿图像
+    async function generateTryOnImage(baseFilename, coordFilename, imgElement) {
+      try {
+        // 添加加载状态
+        imgElement.classList.add('loading');
+        
+        // 显示加载通知
+        showNotification('正在生成试穿效果，请稍候...', 'info');
+        
+        // 调用后端API生成试穿图像
+        const response = await fetch("{% url 'generate_try_on_image' %}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({
+            coord_filename: coordFilename,
+            base_filename: baseFilename
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // 生成成功，显示试穿图像
+          const fitPath = result.fit_path;
+          
+          // 添加切换动画
+          imgElement.classList.add('switching');
+          imgElement.classList.remove('loading');
+          
+          // 等待动画开始
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // 切换图片源
+          imgElement.src = fitPath;
+          imgElement.setAttribute('data-showing-fit', 'true');
+          
+          // 更新样式类
+          imgElement.classList.remove('coord-mode');
+          imgElement.classList.add('fit-mode');
+          
+          // 更新状态指示器
+          const indicator = imgElement.parentElement.querySelector('.mode-indicator');
+          if (indicator) {
+            indicator.textContent = '试穿';
+            indicator.style.background = 'rgba(103, 58, 183, 0.8)';
+          }
+          
+          // 等待动画完成
+          setTimeout(() => {
+            imgElement.classList.remove('switching');
+          }, 600);
+          
+          showNotification('试穿效果生成成功！', 'success');
+        } else {
+          // 生成失败
+          imgElement.classList.remove('loading');
+          showNotification('试穿效果生成失败：' + (result.error || '未知错误'), 'error');
+        }
+      } catch (error) {
+        console.error('生成试穿图像错误:', error);
+        imgElement.classList.remove('loading');
+        showNotification('生成试穿效果时出错，请重试', 'error');
+      }
+    }
+
+    // 获取CSRF Token的辅助函数
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    // 点击弹窗外部关闭弹窗
+    window.addEventListener('click', function(event) {
+      const modal = document.getElementById('outfitModal');
+      if (event.target === modal) {
+        closeOutfitModal();
+      }
+    });
+
+    function getWeather() {
+        const citySelect = document.getElementById('citySelect');
+        const city = citySelect.value;
+        document.cookie = `city=${encodeURIComponent(city)}; path=/`;
+        const url = `/get_weather/?city=${encodeURIComponent(city)}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    const weatherCardsDiv = document.getElementById('weatherCards');
+                    weatherCardsDiv.innerHTML = ''; // 清空现有天气卡片
+
+                    // 获取穿搭建议相关元素
+                    const hotTag = document.getElementById('hotTag');
+                    const suggestText = document.getElementById('suggestText');
+                    // 获取今日搭配描述元素
+                    const matchDesc = document.getElementById('matchDesc');
+                    // 获取今日搭配卡片容器
+                    const matchCardsDiv = document.getElementById('matchCards');
+                    matchCardsDiv.innerHTML = ''; // 清空现有搭配卡片
+
+                    // 假设使用第一天的天气数据来生成建议
+                    const firstWeatherInfo = data.weather_info_list[0];
+                    const condition = firstWeatherInfo.condition;
+                    const tempHigh = parseInt(firstWeatherInfo.temp_high);
+                    const tempLow = parseInt(firstWeatherInfo.temp_low);
+
+                    if (condition === '晴' && tempLow >= 20) {
+                        hotTag.textContent = '热';
+                        hotTag.className = 'hot-tag hot';
+                        suggestText.textContent = '适合穿清凉短袖搭配短裤，短裙等夏日装扮。';
+                        // 根据天气情况修改今日搭配描述
+                        matchDesc.textContent = '今日适合夏日清新风';
+                    } else if (condition.includes('雨')) {
+                        hotTag.textContent = '雨';
+                        hotTag.className = 'hot-tag rain';
+                        suggestText.textContent = '建议添加外套，外出注意防雨措施，建议速干材质的衣物。';
+                        // 根据天气情况修改今日搭配描述
+                        matchDesc.textContent = '今日适合简约实用风';
+                    } else {
+                        hotTag.textContent = '阴';
+                        hotTag.className = 'hot-tag cloudy';
+                        suggestText.textContent = '温度适宜，建议短袖搭配长裤，长裙，可根据个人情况添加薄外套。';
+                        // 根据天气情况修改今日搭配描述
+                        matchDesc.textContent = '今日适合日常休闲风';
+                    }
+
+                    data.weather_info_list.forEach(weatherInfo => {
+                        const date = weatherInfo.date.slice(5).replace('-', '/');
+                        let iconUrl = '';
+                        switch (weatherInfo.condition) {
+                            case '晴':
+                                iconUrl = "{% static 'icons/sunny.png' %}";
+                                break;
+                            case '小雨':
+                                iconUrl = "{% static 'icons/rainy.png' %}";
+                                break;
+                            case '中雨':
+                                iconUrl = "{% static 'icons/rainy.png' %}";
+                                break;
+                            case '大雨':
+                                iconUrl = "{% static 'icons/rainy.png' %}";
+                                break;
+                            case '雷阵雨':
+                                iconUrl = "{% static 'icons/雷阵雨.png' %}";
+                                break;
+                            case '多云':
+                                iconUrl = "{% static 'icons/unsunny.png' %}";
+                                break;
+                            case '阴':
+                                iconUrl = "{% static 'icons/unsunny.png' %}";
+                                break;
+                            case '雪':
+                                iconUrl = "{% static 'icons/snowy.png' %}";
+                                break;
+                            case '风':
+                                iconUrl = "{% static 'icons/windy.png' %}";
+                                break;
+                            default:
+                                iconUrl = 'https://cdn-icons-png.flaticon.com/512/869/869869.png';
+                        }
+
+                        const cardHtml = `
+                            <div class="weather-card">
+                                <div class="weather-date">${date}</div>
+                                <img src="${iconUrl}" alt="${weatherInfo.condition}" class="weather-icon">
+                                <div class="weather-temp">${weatherInfo.condition}</div>
+                                <div class="weather-temp">${weatherInfo.temp_low}°-${weatherInfo.temp_high}°</div>
+                            </div>
+                        `;
+                        weatherCardsDiv.innerHTML += cardHtml;
+                    });
+
+                    // 天气卡片生成后重新初始化触摸滑动功能
+                    setTimeout(() => {
+                        initWeatherCardsTouchScroll();
+                        
+                        // 添加滑动提示
+                        const weatherCardsDiv = document.getElementById('weatherCards');
+                        if (weatherCardsDiv && weatherCardsDiv.children.length > 1) {
+                            // 创建滑动提示
+                            const hint = document.createElement('div');
+                            // 获取天气卡片容器的位置信息
+                            const weatherCardsRect = weatherCardsDiv.getBoundingClientRect();
+                            const topPosition = weatherCardsRect.top + weatherCardsRect.height / 2;
+                            
+                            hint.style.cssText = `
+                                position: fixed;
+                                top: ${topPosition}px;
+                                right: 20px;
+                                transform: translateY(-50%);
+                                background: rgba(103, 58, 183, 0.8);
+                                color: white;
+                                padding: 8px 12px;
+                                border-radius: 20px;
+                                font-size: 12px;
+                                z-index: 1000;
+                                animation: fadeInOut 3s ease-in-out;
+                                pointer-events: none;
+                            `;
+                            hint.textContent = '←双击卡片以滑动';
+                            document.body.appendChild(hint);
+                            
+                            // 3秒后移除提示
+                            setTimeout(() => {
+                                if (hint.parentNode) {
+                                    hint.parentNode.removeChild(hint);
+                                }
+                            }, 3000);
+                        }
+                    }, 100);
+
+                    // 调用后端接口获取图片 URL
+                    const weatherInfo = JSON.stringify(firstWeatherInfo);
+                    const matchingUrl = `/get_matching_images/?city=${encodeURIComponent(city)}&weather_info=${encodeURIComponent(weatherInfo)}`;
+                    
+                    fetch(matchingUrl)
+                        .then(response => response.json())
+                        .then(matchingData => {
+                            if (matchingData.error) {
+                                // 显示错误通知
+                                showNotification(matchingData.error, 'error');
+                            } else {
+                                // 清空现有内容
+                                matchCardsDiv.innerHTML = '';
+                                
+                                // 设置容器样式
+                                matchCardsDiv.style.display = 'flex';
+                                matchCardsDiv.style.gap = '12px';
+                                matchCardsDiv.style.justifyContent = 'flex-start'; // 左对齐
+                                
+                                matchingData.image_urls.forEach((imageUrl, index) => {
+                                    // 从URL中提取目录名和文件名
+                                    const urlParts = imageUrl.split('/');
+                                    const directory = urlParts[urlParts.length - 2];
+                                    const filename = urlParts[urlParts.length - 1];
+                                    
+                                    // 提取基础文件名（去掉扩展名）
+                                    const baseFilename = directory;
+                                    const coordFilename = filename;
+                                    
+                                    // 计算图片宽度：如果只有一张图片，宽度为200px；如果有两张图片，每张宽度为180px
+                                    const cardWidth = matchingData.image_urls.length === 1 ? '200px' : '180px';
+                                    
+                                    const imgHtml = `
+                                        <div class="match-card" style="width: ${cardWidth}; height: 300px; cursor: pointer; flex-shrink: 0;" 
+                                             onclick="showOutfitModal('${baseFilename}', '${coordFilename}', '${imageUrl}')">
+                                            <img src="${imageUrl}" alt="搭配图片" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                                        </div>
+                                    `;
+                                    matchCardsDiv.innerHTML += imgHtml;
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            showNotification('请求搭配图片信息时出错，请稍后重试', 'error');
+                            console.error('Error:', error);
+                        });
+                }
+            })
+            .catch(error => {
+                alert('请求天气信息时出错，请稍后重试');
+                console.error('Error:', error);
+            });
+    }
+
+    // 天气卡片触摸滑动功能 - 增强版本
+    function initWeatherCardsTouchScroll() {
+        const weatherCards = document.getElementById('weatherCards');
+        if (!weatherCards) {
+            console.log('Weather cards container not found');
+            return;
+        }
+
+        console.log('Initializing enhanced weather cards touch scroll');
+
+        // 移除所有之前的事件监听器
+        const newWeatherCards = weatherCards.cloneNode(true);
+        weatherCards.parentNode.replaceChild(newWeatherCards, weatherCards);
+        
+        // 重新获取元素引用
+        const freshWeatherCards = document.getElementById('weatherCards');
+
+        // 确保CSS样式正确应用
+        freshWeatherCards.style.overflowX = 'auto';
+        freshWeatherCards.style.webkitOverflowScrolling = 'touch';
+        freshWeatherCards.style.scrollBehavior = 'smooth';
+        freshWeatherCards.style.touchAction = 'pan-x';
+        freshWeatherCards.style.userSelect = 'none';
+        freshWeatherCards.style.webkitUserSelect = 'none';
+        freshWeatherCards.style.mozUserSelect = 'none';
+        freshWeatherCards.style.msUserSelect = 'none';
+        
+        // 添加触摸提示
+        freshWeatherCards.style.cursor = 'grab';
+        freshWeatherCards.setAttribute('title', '左右滑动查看天气');
+        
+        // 简化滚动状态检测
+        freshWeatherCards.addEventListener('scroll', function() {
+            console.log('Scroll detected');
+        });
+        
+        // 添加触摸事件监听器来增强响应性
+        freshWeatherCards.addEventListener('touchstart', function(e) {
+            console.log('Touch start detected');
+            // 强制触发重排以确保触摸响应
+            freshWeatherCards.offsetHeight;
+        }, { passive: true });
+        
+        freshWeatherCards.addEventListener('touchmove', function(e) {
+            console.log('Touch move detected');
+        }, { passive: true });
+        
+        freshWeatherCards.addEventListener('touchend', function(e) {
+            console.log('Touch end detected');
+        }, { passive: true });
+        
+        // 添加点击事件来测试滑动区域
+        freshWeatherCards.addEventListener('click', function(e) {
+            console.log('Click detected on weather cards container');
+        });
+        
+        // 添加双击事件来强制刷新滑动功能
+        freshWeatherCards.addEventListener('dblclick', function(e) {
+            console.log('Double click detected, refreshing scroll functionality');
+            initWeatherCardsTouchScroll();
+        });
+        
+        console.log('Weather cards touch scroll initialized successfully');
+        console.log('Container styles:', {
+            overflowX: freshWeatherCards.style.overflowX,
+            webkitOverflowScrolling: freshWeatherCards.style.webkitOverflowScrolling,
+            scrollBehavior: freshWeatherCards.style.scrollBehavior,
+            touchAction: freshWeatherCards.style.touchAction
+        });
+    }
+</script>
+    </div>
+</body>
+</body>
+
+</html>
