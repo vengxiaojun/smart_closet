@@ -23,26 +23,38 @@
    git clone https://github.com/<your-org>/smart-mirror.git && cd smart-mirror
    ```
 
-1. 一键启动（含云端仿真）
+2. 部署leffa server
 
-   bash
-
-   复制
+   leffa 目录下包含优化后的leffa代码，建议使用算力强悍的GPU部署
 
    ```bash
-   docker compose up -d
+   cd leffa
+   ```
+
+   ```bash
+   #此处建议创建虚拟环境后进行下一步
+   pip install -r requiremens.txt
+   ```
+
+   ```bash
+   python server.py 
    ```
 
    
 
-2. 烧录固件
-
-   bash
-
-   复制
+2. 运行Django项目
 
    ```bash
-   make flash
+   cd Django_webapp
+   ```
+
+   ```bash
+   #此处建议创建虚拟环境后进入下一步
+   pip install -r requirements.txt
+   ```
+   
+   ```bash
+   python manage.py runserver 0.0.0.0:8000
    ```
 
    
